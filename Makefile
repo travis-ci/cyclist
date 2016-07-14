@@ -33,7 +33,7 @@ test: deps
 
 .PHONY: list-deps
 list-deps:
-	go list -f '{{ join .Imports "\n" }}' $(PACKAGES) | sort | uniq
+	@go list -f '{{ join .Imports "\n" }}' $(PACKAGES) | sort | uniq
 
 .PHONY: lint
 lint: deps
@@ -49,12 +49,19 @@ clean:
 
 deps: $(GOPATH)/bin/gvt vendor/.deps-fetched
 
-$(GOPATH)/bin/gvt:
-	go get github.com/FiloSottile/gvt
-
 vendor/.deps-fetched:
 	gvt rebuild
 	touch $@
 
 bin/%: cmd/% $(wildcard **/*.go)
 	go build -ldflags "$(GOBUILD_LDFLAGS)" -o $@ ./$<
+
+.PHONY: dev-server
+dev-server: $(GOPATH)/bin/reflex
+	reflex -r '\.go$$' -s go run ./cmd/travis-cyclist/main.go serve
+
+$(GOPATH)/bin/gvt:
+	go get github.com/FiloSottile/gvt
+
+$(GOPATH)/bin/reflex:
+	go get github.com/cespare/reflex

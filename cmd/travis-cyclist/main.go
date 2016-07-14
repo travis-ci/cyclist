@@ -7,5 +7,5 @@ import (
 )
 
 func main() {
-	cyclist.RunCLI(os.Args)
+	cyclist.NewCLI().Run(os.Args)
 }

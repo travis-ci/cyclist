@@ -12,12 +12,21 @@ import (
 	"gopkg.in/urfave/cli.v2"
 )
 
-// RunCLI runs the cli oh wow!
-func RunCLI(argv []string) {
-	app := &cli.App{
+// NewCLI makes the cli oh wow!
+func NewCLI() *cli.App {
+	return &cli.App{
 		Usage:     "AWS ASG LIFECYCLE THING",
 		Version:   VersionString,
 		Copyright: CopyrightString,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "aws-region",
+				Aliases: []string{"r"},
+				Value:   "us-east-1",
+				Usage:   "AWS region to use for the stuff",
+				EnvVars: []string{"TRAVIS_CYCLIST_AWS_REGION", "AWS_REGION"},
+			},
+		},
 		Commands: []*cli.Command{
 			{
 				Name: "serve",
@@ -34,7 +43,6 @@ func RunCLI(argv []string) {
 			},
 		},
 	}
-	app.Run(argv)
 }
 
 func runServe(ctx *cli.Context) error {
@@ -42,16 +50,17 @@ func runServe(ctx *cli.Context) error {
 	if !strings.Contains(port, ":") {
 		port = fmt.Sprintf("[::1]:%s", port)
 	}
-	return newServer(port).Serve()
+	return newServer(port, ctx.String("aws-region")).Serve()
 }
 
 type server struct {
-	port string
-	r    *mux.Router
+	port, awsRegion string
+
+	r *mux.Router
 }
 
-func newServer(port string) *server {
-	srv := &server{port: port}
+func newServer(port, awsRegion string) *server {
+	srv := &server{port: port, awsRegion: awsRegion}
 	srv.setupRouter()
 	return srv
 }
@@ -63,15 +72,20 @@ func (srv *server) ohai(w http.ResponseWriter, req *http.Request) {
 func (srv *server) Serve() error {
 	logrus.WithField("port", srv.port).Info("serving")
 
-	return http.ListenAndServe(srv.port, negroni.New(
+	err := http.ListenAndServe(srv.port, negroni.New(
 		negroni.NewRecovery(),
 		negronilogrus.NewMiddleware(),
 		negroni.Wrap(srv.r),
 	))
+
+	if err != nil {
+		logrus.WithField("err", err).Error("failed to serve")
+	}
+	return err
 }
 
 func (srv *server) setupRouter() {
 	srv.r = mux.NewRouter()
-	srv.r.HandleFunc("/sns", snsHandler).Methods("POST")
+	srv.r.HandleFunc("/sns", newSnsHandlerFunc(srv.awsRegion)).Methods("POST")
 	srv.r.HandleFunc("/", srv.ohai).Methods("GET", "HEAD")
 }
