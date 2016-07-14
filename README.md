@@ -8,3 +8,12 @@
     $ export GO15VENDOREXPERIMENT=1
 
     $ gvt restore
+
+## Develop
+
+    $ go get github.com/cespare/reflex
+    $ reflex -r '\.go$' -s go run main.go
+
+## Run
+
+    $ go run main.go
