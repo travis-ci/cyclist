@@ -4,16 +4,16 @@
 
 ## Install
 
-    $ go get -u github.com/FiloSottile/gvt
-    $ export GO15VENDOREXPERIMENT=1
+``` bash
+go get github.com/FiloSottile/gvt
+export GO15VENDOREXPERIMENT=1
 
-    $ gvt restore
+make
+```
 
 ## Develop
 
-    $ go get github.com/cespare/reflex
-    $ reflex -r '\.go$' -s go run main.go
-
-## Run
-
-    $ go run main.go
+``` bash
+go get github.com/cespare/reflex
+reflex -r '\.go$' -s go run ./cmd/travis-cyclist/main.go
+```

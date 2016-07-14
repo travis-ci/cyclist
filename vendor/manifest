@@ -802,6 +802,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/urfave/cli",
+			"repository": "https://github.com/urfave/cli",
+			"vcs": "git",
+			"revision": "73aa67b7a20db7514b1c086866469c49bc93a569",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/urfave/negroni",
 			"repository": "https://github.com/urfave/negroni",
 			"vcs": "git",
@@ -849,6 +857,14 @@
 			"vcs": "git",
 			"revision": "31e6fd4bd5a98d8ee7673d24bc54ec73c31810dd",
 			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "gopkg.in/urfave/cli.v2",
+			"repository": "https://gopkg.in/urfave/cli.v2",
+			"vcs": "git",
+			"revision": "2b959bd8919d1110df44ec9a839e25a739906c3c",
+			"branch": "v2",
 			"notests": true
 		},
 		{
