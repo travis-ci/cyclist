@@ -802,14 +802,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/urfave/cli",
-			"repository": "https://github.com/urfave/cli",
-			"vcs": "git",
-			"revision": "73aa67b7a20db7514b1c086866469c49bc93a569",
-			"branch": "master",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/urfave/negroni",
 			"repository": "https://github.com/urfave/negroni",
 			"vcs": "git",
