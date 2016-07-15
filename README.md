@@ -22,18 +22,12 @@ that it is ready to shut down. Cyclist then terminates the instance.
 
 ## Install
 
-    $ go get -u github.com/FiloSottile/gvt
-    $ export GO15VENDOREXPERIMENT=1
-
-    $ gvt restore
+``` bash
+make
+```
 
 ## Develop
 
-    $ go get github.com/cespare/reflex
-    $ reflex -r '\.go$' -s go run main.go
-
-## Run
-
-    $ go run main.go
-
-    $ curl localhost:8080
+``` bash
+make dev-server
+```

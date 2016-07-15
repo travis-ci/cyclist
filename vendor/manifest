@@ -852,6 +852,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "gopkg.in/urfave/cli.v2",
+			"repository": "https://gopkg.in/urfave/cli.v2",
+			"vcs": "git",
+			"revision": "2b959bd8919d1110df44ec9a839e25a739906c3c",
+			"branch": "v2",
+			"notests": true
+		},
+		{
 			"importpath": "gopkg.in/yaml.v2",
 			"repository": "https://gopkg.in/yaml.v2",
 			"vcs": "git",
