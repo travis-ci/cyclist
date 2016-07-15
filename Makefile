@@ -37,7 +37,9 @@ list-deps:
 
 .PHONY: lint
 lint: deps
-	gometalinter --deadline=1m -Dstructcheck -Derrcheck -Dgotype --vendor . ./cmd/*/
+	gometalinter --disable-all \
+		-E goimports -E gofmt -E goconst -E deadcode -E golint -E vet \
+		--deadline=1m --vendor . ./cmd/*/
 
 .PHONY: bin
 bin: deps $(BINARIES)
