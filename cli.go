@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"strings"
 
+	"gopkg.in/urfave/cli.v2"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/meatballhat/negroni-logrus"
 	"github.com/urfave/negroni"
-	"gopkg.in/urfave/cli.v2"
 )
 
 // NewCLI makes the cli oh wow!
@@ -87,5 +88,7 @@ func (srv *server) Serve() error {
 func (srv *server) setupRouter() {
 	srv.r = mux.NewRouter()
 	srv.r.HandleFunc("/sns", newSnsHandlerFunc(srv.awsRegion)).Methods("POST")
+	srv.r.HandleFunc("/status/{instanceID}", newStatusGetHandlerFunc()).Methods("GET")
+	srv.r.HandleFunc("/status/{instanceID}", newStatusPutHandlerFunc()).Methods("PUT")
 	srv.r.HandleFunc("/", srv.ohai).Methods("GET", "HEAD")
 }
