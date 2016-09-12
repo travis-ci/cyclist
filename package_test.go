@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/garyburd/redigo/redis"
 	"github.com/rafaeljusto/redigomock"
@@ -29,6 +30,21 @@ func (tsg *testSNSGetter) Get(awsRegion string) *sns.SNS {
 	svc.Handlers.Build.PushBack(func(r *request.Request) {
 		if tsg.ErrorConfirmSubscription {
 			r.Error = errors.New("boom")
+		}
+	})
+	return svc
+}
+
+type testAutoScalingGetter struct {
+	Error error
+}
+
+func (tasg *testAutoScalingGetter) Get(awsRegion string) *autoscaling.AutoScaling {
+	svc := autoscaling.New(session.New(), &aws.Config{Region: aws.String(awsRegion)})
+	svc.Handlers.Clear()
+	svc.Handlers.Build.PushBack(func(r *request.Request) {
+		if tasg.Error != nil {
+			r.Error = tasg.Error
 		}
 	})
 	return svc

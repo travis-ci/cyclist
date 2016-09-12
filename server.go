@@ -43,7 +43,8 @@ func (srv *server) Serve() error {
 func (srv *server) setupRouter() {
 	srv.r = mux.NewRouter()
 	srv.r.HandleFunc(`/sns`, newSnsHandlerFunc(srv.awsRegion)).Methods("POST")
-	srv.r.HandleFunc(`/status/{instance_id}`, newStatusGetHandlerFunc(srv.awsRegion)).Methods("GET")
-	srv.r.HandleFunc(`/status/{instance_id}`, newStatusPutHandlerFunc(srv.awsRegion)).Methods("PUT")
+	srv.r.HandleFunc(`/heartbeats/{instance_id}`, newInstanceHeartbeatHandlerFunc(srv.awsRegion)).Methods("GET")
+	srv.r.HandleFunc(`/launches/{instance_id}`, newInstanceLaunchHandlerFunc(srv.awsRegion)).Methods("POST")
+	srv.r.HandleFunc(`/terminations/{instance_id}`, newInstanceTerminationHandlerFunc(srv.awsRegion)).Methods("POST")
 	srv.r.HandleFunc(`/`, srv.ohai).Methods("GET", "HEAD")
 }

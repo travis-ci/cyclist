@@ -112,7 +112,7 @@ func TestHandleSNSNotification_InstanceTerminating(t *testing.T) {
 			"LifecycleHookName": "huzzah-9001"
 		}`, ""), ""),
 	}
-	conn.Command("HMSET", "cyclist:instance:i-fafafaf", "expected_state", "down")
+	conn.Command("SET", "cyclist:instance:i-fafafaf:state", "down")
 	conn.Command("MULTI").Expect("OK!")
 	conn.Command("SADD", "cyclist:instance_terminating", "i-fafafaf").Expect("OK!")
 	conn.Command("HMSET",

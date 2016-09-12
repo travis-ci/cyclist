@@ -1,15 +1,12 @@
 package cyclist
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/gorilla/mux"
-	"github.com/pborman/uuid"
 )
 
 func handleLifecycleTransition(awsRegion string, t *lifecycleTransition) error {
@@ -20,15 +17,10 @@ func handleLifecycleTransition(awsRegion string, t *lifecycleTransition) error {
 	}
 
 	if action == nil {
-		// TODO: ERR: NO ACTION FOUND
-		return nil
+		return fmt.Errorf("no lifecycle transition '%s' for instance '%s'", t.Transition, t.InstanceID)
 	}
 
-	svc := autoscaling.New(
-		session.New(),
-		&aws.Config{
-			Region: aws.String(awsRegion),
-		})
+	svc := ag.Get(awsRegion)
 
 	input := &autoscaling.CompleteLifecycleActionInput{
 		AutoScalingGroupName:  aws.String(action.AutoScalingGroupName),
@@ -51,38 +43,44 @@ func handleLifecycleTransition(awsRegion string, t *lifecycleTransition) error {
 	return nil
 }
 
-func newStatusGetHandlerFunc(awsRegion string) http.HandlerFunc {
+func newInstanceLaunchHandlerFunc(awsRegion string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		instanceID := vars["instance_id"]
+		t := &lifecycleTransition{
+			Transition: "launching",
+			InstanceID: mux.Vars(r)["instance_id"],
+		}
 
-		log.WithField("instance_id", instanceID).Debug("hellote")
+		w.Header().Set("Content-Type", "application/json")
+
+		err := handleLifecycleTransition(awsRegion, t)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, `{"error":"handling lifecycle transition failed: %s"}`, err)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"message":"instance launch complete"}`)
 	}
 }
 
-func newStatusPutHandlerFunc(awsRegion string) http.HandlerFunc {
+func newInstanceTerminationHandlerFunc(awsRegion string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		instanceID := vars["instance_id"]
+		t := &lifecycleTransition{
+			Transition: "terminating",
+			InstanceID: mux.Vars(r)["instance_id"],
+		}
 
-		t := &lifecycleTransition{}
-		t.ID = uuid.NewUUID().String()
-		t.InstanceID = instanceID
+		w.Header().Set("Content-Type", "application/json")
 
-		err := json.NewDecoder(r.Body).Decode(t)
+		err := handleLifecycleTransition(awsRegion, t)
 		if err != nil {
-			fmt.Fprintf(w, "invalid json received: %s\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, `{"error":"handling lifecycle transition failed: %s"}`, err)
 			return
 		}
 
-		err = handleLifecycleTransition(awsRegion, t)
-		if err != nil {
-			fmt.Fprintf(w, "handling lifecycle transition falied: %s\n", err)
-			return
-		}
-
-		// TODO: json response?
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "status updated successfully\n")
+		fmt.Fprintf(w, `{"message":"instance termination complete"}`)
 	}
 }

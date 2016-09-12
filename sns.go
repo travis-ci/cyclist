@@ -6,28 +6,9 @@ import (
 	"net/http"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/pkg/errors"
 )
-
-var (
-	sg snsGetter = &defaultSNSGetter{}
-)
-
-type snsGetter interface {
-	Get(awsRegion string) *sns.SNS
-}
-
-type defaultSNSGetter struct{}
-
-func (dsg *defaultSNSGetter) Get(awsRegion string) *sns.SNS {
-	return sns.New(
-		session.New(),
-		&aws.Config{
-			Region: aws.String(awsRegion),
-		})
-}
 
 func handleSNSConfirmation(msg *snsMessage, awsRegion string) (int, error) {
 	svc := sg.Get(awsRegion)
@@ -68,7 +49,7 @@ func handleSNSNotification(msg *snsMessage, awsRegion string) (int, error) {
 		log.WithField("action", action).Debug("setting expected_state to down")
 		rc := dbPool.Get()
 
-		err = setInstanceAttributes(rc, action.EC2InstanceID, map[string]string{"expected_state": "down"})
+		err = setInstanceState(rc, action.EC2InstanceID, "down")
 		if err != nil {
 			return http.StatusBadRequest, err
 		}

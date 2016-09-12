@@ -53,19 +53,23 @@ func buildRedisPool(redisURL string) (*redis.Pool, error) {
 	return pool, nil
 }
 
-func setInstanceAttributes(conn redis.Conn, instanceID string, attrs map[string]string) error {
+func setInstanceState(conn redis.Conn, instanceID, state string) error {
 	if strings.TrimSpace(instanceID) == "" {
 		return errEmptyInstanceID
 	}
 
-	instanceAttrsKey := fmt.Sprintf("%s:instance:%s", RedisNamespace, instanceID)
-	hmSet := []interface{}{instanceAttrsKey}
-	for key, value := range attrs {
-		hmSet = append(hmSet, key, value)
+	instanceStateKey := fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID)
+	_, err := conn.Do("SET", instanceStateKey, state)
+	return err
+}
+
+func fetchInstanceState(conn redis.Conn, instanceID string) (string, error) {
+	if strings.TrimSpace(instanceID) == "" {
+		return "", errEmptyInstanceID
 	}
 
-	_, err := conn.Do("HMSET", hmSet...)
-	return err
+	return redis.String(conn.Do("GET",
+		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID)))
 }
 
 func storeInstanceLifecycleAction(conn redis.Conn, a *lifecycleAction) error {
@@ -107,6 +111,10 @@ func storeInstanceLifecycleAction(conn redis.Conn, a *lifecycleAction) error {
 }
 
 func fetchInstanceLifecycleAction(conn redis.Conn, transition, instanceID string) (*lifecycleAction, error) {
+	if strings.TrimSpace(instanceID) == "" {
+		return nil, errEmptyInstanceID
+	}
+
 	exists, err := redis.Bool(conn.Do("SISMEMBER", fmt.Sprintf("%s:instance_%s", RedisNamespace, transition), instanceID))
 	if !exists {
 		return nil, nil
@@ -123,6 +131,10 @@ func fetchInstanceLifecycleAction(conn redis.Conn, transition, instanceID string
 }
 
 func wipeInstanceLifecycleAction(conn redis.Conn, transition, instanceID string) error {
+	if strings.TrimSpace(instanceID) == "" {
+		return errEmptyInstanceID
+	}
+
 	err := conn.Send("MULTI")
 	if err != nil {
 		return err
