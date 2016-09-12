@@ -1,45 +1,12 @@
 package cyclist
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sns"
-	"github.com/garyburd/redigo/redis"
-	"github.com/rafaeljusto/redigomock"
 	"github.com/stretchr/testify/assert"
 )
-
-type testSNSGetter struct {
-	ErrorConfirmSubscription bool
-}
-
-func (tsg *testSNSGetter) Get(awsRegion string) *sns.SNS {
-	svc := sns.New(session.New(), &aws.Config{Region: aws.String(awsRegion)})
-	svc.Handlers.Clear()
-	svc.Handlers.Build.PushBack(func(r *request.Request) {
-		if tsg.ErrorConfirmSubscription {
-			r.Error = errors.New("boom")
-		}
-	})
-	return svc
-}
-
-type testRedisConnGetter struct {
-	Conn *redigomock.Conn
-}
-
-func (trcg *testRedisConnGetter) Get() redis.Conn {
-	if trcg.Conn == nil {
-		trcg.Conn = redigomock.NewConn()
-	}
-	return trcg.Conn
-}
 
 func TestHandleSNSConfirmation(t *testing.T) {
 	oldSg := sg
@@ -77,7 +44,7 @@ func TestHandleSNSNotification_TestNotification(t *testing.T) {
 		Message: `{"Event": "autoscaling:TEST_NOTIFICATION"}`,
 	}
 	status, err := handleSNSNotification(msg, "nz-mordor-1")
-	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, http.StatusAccepted, status)
 	assert.Nil(t, err)
 }
 

@@ -51,14 +51,14 @@ func handleSNSNotification(msg *snsMessage, awsRegion string) (int, error) {
 
 	if action.Event == "autoscaling:TEST_NOTIFICATION" {
 		log.WithField("event", action.Event).Info("ignoring")
-		return http.StatusOK, nil
+		return http.StatusAccepted, nil
 	}
-
-	rc := dbPool.Get()
 
 	switch action.LifecycleTransition {
 	case "autoscaling:EC2_INSTANCE_LAUNCHING":
 		log.WithField("action", action).Debug("storing instance launching lifecycle action")
+		rc := dbPool.Get()
+
 		err = storeInstanceLifecycleAction(rc, action)
 		if err != nil {
 			return http.StatusBadRequest, err
@@ -66,9 +66,11 @@ func handleSNSNotification(msg *snsMessage, awsRegion string) (int, error) {
 		return http.StatusOK, nil
 	case "autoscaling:EC2_INSTANCE_TERMINATING":
 		log.WithField("action", action).Debug("setting expected_state to down")
+		rc := dbPool.Get()
+
 		err = setInstanceAttributes(rc, action.EC2InstanceID, map[string]string{"expected_state": "down"})
 		if err != nil {
-			return http.StatusInternalServerError, err
+			return http.StatusBadRequest, err
 		}
 		log.WithField("action", action).Debug("storing instance terminating lifecycle action")
 		err = storeInstanceLifecycleAction(rc, action)

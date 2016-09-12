@@ -1,6 +1,7 @@
 package cyclist
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -11,6 +12,8 @@ import (
 
 var (
 	dbPool redisConnGetter
+
+	errEmptyInstanceID = errors.New("empty instance id")
 )
 
 type redisConnGetter interface {
@@ -51,6 +54,10 @@ func buildRedisPool(redisURL string) (*redis.Pool, error) {
 }
 
 func setInstanceAttributes(conn redis.Conn, instanceID string, attrs map[string]string) error {
+	if strings.TrimSpace(instanceID) == "" {
+		return errEmptyInstanceID
+	}
+
 	instanceAttrsKey := fmt.Sprintf("%s:instance:%s", RedisNamespace, instanceID)
 	hmSet := []interface{}{instanceAttrsKey}
 	for key, value := range attrs {
