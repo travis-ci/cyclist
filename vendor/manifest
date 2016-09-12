@@ -260,6 +260,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/rafaeljusto/redigomock",
+			"repository": "https://github.com/rafaeljusto/redigomock",
+			"vcs": "git",
+			"revision": "7201885ad17aca2d5f97adc05cdb2d23af8fe047",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/shiena/ansicolor",
 			"repository": "https://github.com/shiena/ansicolor",
 			"vcs": "git",

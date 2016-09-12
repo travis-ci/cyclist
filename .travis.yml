@@ -29,6 +29,9 @@ script:
 - make
 - build/linux/amd64/cyclist --help
 - build/linux/amd64/cyclist serve --help
+- build/linux/amd64/cyclist sqs --help
+- grep -q web Procfile
+- grep -q worker Procfile
 
 after_success:
 - bash <(curl -s https://codecov.io/bash)

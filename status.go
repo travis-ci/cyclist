@@ -39,6 +39,7 @@ func handleLifecycleTransition(awsRegion string, t *lifecycleTransition) error {
 	}
 	_, err = svc.CompleteLifecycleAction(input)
 	if err != nil {
+
 		return err
 	}
 
@@ -52,10 +53,10 @@ func handleLifecycleTransition(awsRegion string, t *lifecycleTransition) error {
 
 func newStatusGetHandlerFunc(awsRegion string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// vars := mux.Vars(request)
-		// instanceID := vars["instanceID"]
+		vars := mux.Vars(r)
+		instanceID := vars["instance_id"]
 
-		// TODO: return status and expected_state
+		log.WithField("instance_id", instanceID).Debug("hellote")
 	}
 }
 

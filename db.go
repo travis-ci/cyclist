@@ -10,8 +10,12 @@ import (
 )
 
 var (
-	dbPool *redis.Pool
+	dbPool redisConnGetter
 )
+
+type redisConnGetter interface {
+	Get() redis.Conn
+}
 
 func buildRedisPool(redisURL string) (*redis.Pool, error) {
 	u, err := url.Parse(redisURL)
