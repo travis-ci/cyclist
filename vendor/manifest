@@ -135,6 +135,24 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/garyburd/redigo/internal",
+			"repository": "https://github.com/garyburd/redigo",
+			"vcs": "git",
+			"revision": "ffa8d46ada782d81cfda81a0fbd9f45ceae448e8",
+			"branch": "master",
+			"path": "internal",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/garyburd/redigo/redis",
+			"repository": "https://github.com/garyburd/redigo",
+			"vcs": "git",
+			"revision": "ffa8d46ada782d81cfda81a0fbd9f45ceae448e8",
+			"branch": "master",
+			"path": "/redis",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/getsentry/raven-go",
 			"repository": "https://github.com/getsentry/raven-go",
 			"vcs": "git",
