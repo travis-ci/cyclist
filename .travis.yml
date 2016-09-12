@@ -1,10 +1,35 @@
 language: go
-go: 1.6.2
+
+go: 1.7.1
+
+env:
+  global:
+  - TRAVIS_COMMIT_SHORT="$(echo ${TRAVIS_COMMIT} | cut -b1-7)"
+  - TRAVIS_COMMIT_LESSSHORT="$(echo ${TRAVIS_COMMIT} | cut -b1-9)"
+  - PATH="${HOME}/gopath/bin:${PATH}"
+
+addons:
+  artifacts:
+    paths:
+    - "./build/linux/amd64/cyclist"
+    - "./build/darwin/amd64/cyclist"
+    - "./build.tar.gz"
+    target_paths:
+    - travis-ci/cyclist/$TRAVIS_BRANCH
+    - travis-ci/cyclist/$TRAVIS_COMMIT
+    - travis-ci/cyclist/$TRAVIS_COMMIT_SHORT
+    - travis-ci/cyclist/$TRAVIS_COMMIT_LESSSHORT
+
 install:
 - go get github.com/FiloSottile/gvt
 - go get github.com/alecthomas/gometalinter
 - gometalinter --install
+
 script:
 - make
-- bin/travis-cyclist --help
-- bin/travis-cyclist serve --help
+- build/linux/amd64/cyclist --help
+- build/linux/amd64/cyclist serve --help
+
+after_success:
+- bash <(curl -s https://codecov.io/bash)
+- tar -czvf build.tar.gz build Procfile Makefile
