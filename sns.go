@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
-	"github.com/travis-ci/pudding/db"
+	"github.com/pkg/errors"
 )
 
 type snsMessage struct {
@@ -17,31 +17,7 @@ type snsMessage struct {
 	MessageID string `json:"MessageId"`
 	Token     string
 	TopicARN  string `json:"TopicArn"`
-}
-
-// lifecycleAction is an SNS message payload of the form:
-// {
-//   "AutoScalingGroupName":"name string",
-//   "Service":"prose goop string",
-//   "Time":"iso 8601 timestamp string",
-//   "AccountId":"account id string",
-//   "LifecycleTransition":"transition string, e.g.: autoscaling:EC2_INSTANCE_TERMINATING",
-//   "RequestId":"uuid string",
-//   "LifecycleActionToken":"uuid string",
-//   "EC2InstanceId":"instance id string",
-//   "LifecycleHookName":"name string"
-// }
-type lifecycleAction struct {
-	Event                string
-	AutoScalingGroupName string `redis:"auto_scaling_group_name"`
-	Service              string
-	Time                 string
-	AccountID            string `json:"AccountId"`
-	LifecycleTransition  string
-	RequestID            string `json:"RequestId"`
-	LifecycleActionToken string `redis:"lifecycle_action_token"`
-	EC2InstanceID        string `json:"EC2InstanceId"`
-	LifecycleHookName    string `redis:"lifecycle_hook_name"`
+	Type      string
 }
 
 func (m *snsMessage) lifecycleAction() (*lifecycleAction, error) {
@@ -54,7 +30,7 @@ func (m *snsMessage) lifecycleAction() (*lifecycleAction, error) {
 	return a, nil
 }
 
-func handleSNSConfirmation(msg *snsMessage, awsRegion string) error {
+func handleSNSConfirmation(msg *snsMessage, awsRegion string) (int, error) {
 	svc := sns.New(
 		session.New(),
 		&aws.Config{
@@ -66,37 +42,47 @@ func handleSNSConfirmation(msg *snsMessage, awsRegion string) error {
 		TopicArn: aws.String(msg.TopicARN),
 	}
 	_, err := svc.ConfirmSubscription(params)
-	return err
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
 }
 
-func handleSNSNotification(msg *snsMessage, awsRegion string) error {
+func handleSNSNotification(w http.ResponseWriter, msg *snsMessage, awsRegion string) (int, error) {
 	action, err := msg.lifecycleAction()
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "invalid json received in sns Message: %s\n", err)
-		return
+		return http.StatusBadRequest, errors.Wrap(err, "invalid json received in sns Message")
 	}
 
 	if action.Event == "autoscaling:TEST_NOTIFICATION" {
-		w.WriteHeader(http.StatusOK)
 		logrus.WithField("event", action.Event).Info("ignoring")
-		return
+		return http.StatusOK, nil
 	}
+
+	rc := dbPool.Get()
 
 	switch action.LifecycleTransition {
 	case "autoscaling:EC2_INSTANCE_LAUNCHING":
 		logrus.WithField("action", action).Debug("storing instance launching lifecycle action")
-		return db.StoreInstanceLifecycleAction(rc, action)
+		err = storeInstanceLifecycleAction(rc, action)
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+		return http.StatusOK, nil
 	case "autoscaling:EC2_INSTANCE_TERMINATING":
 		logrus.WithField("action", action).Debug("setting expected_state to down")
-		err = db.SetInstanceAttributes(rc, a.EC2InstanceID, map[string]string{"expected_state": "down"})
+		err = setInstanceAttributes(rc, action.EC2InstanceID, map[string]string{"expected_state": "down"})
 		if err != nil {
-			return err
+			return http.StatusInternalServerError, err
 		}
 		logrus.WithField("action", action).Debug("storing instance terminating lifecycle action")
-		return db.StoreInstanceLifecycleAction(rc, action)
+		err = storeInstanceLifecycleAction(rc, action)
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+		return http.StatusOK, nil
 	default:
-		logrus.WithField("action", a).Warn("unable to handle unknown lifecycle transition")
+		return http.StatusBadRequest, fmt.Errorf("unknown lifecycle transition %q", action.LifecycleTransition)
 	}
 }
 
@@ -106,25 +92,33 @@ func newSnsHandlerFunc(awsRegion string) http.HandlerFunc {
 		err := json.NewDecoder(r.Body).Decode(msg)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, "invalid json received: %s\n", err)
+			fmt.Fprintf(w, `{"error":"invalid json received: %s"}`, err)
 			return
 		}
 
 		switch msg.Type {
 		case "SubscriptionConfirmation":
-			err = handleSNSConfirmation(msg, awsRegion)
+			status, err := handleSNSConfirmation(msg, awsRegion)
+			body := `{"ok": true}`
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "sns confirmation failed: %s\n", err)
-				return
+				body = fmt.Sprintf(`{"error":%q}`, err.Error())
 			}
+			w.WriteHeader(status)
+			fmt.Fprintf(w, body)
+			return
 		case "Notification":
-			err = handleSNSNotification(msg, awsRegion)
+			status, err := handleSNSNotification(w, msg, awsRegion)
+			body := `{"ok": true}`
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "sns notification processing failed: %s\n", err)
-				return
+				body = fmt.Sprintf(`{"error":%q}`, err.Error())
 			}
+			w.WriteHeader(status)
+			fmt.Fprintf(w, body)
+			return
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, `{"error":"unknown message type '%s'"}`, msg.Type)
+			return
 		}
 	}
 }

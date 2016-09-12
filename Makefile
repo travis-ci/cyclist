@@ -22,6 +22,9 @@ GOBUILD_LDFLAGS ?= \
 	-X '$(GENERATED_VAR)=$(GENERATED_VALUE)' \
 	-X '$(COPYRIGHT_VAR)=$(COPYRIGHT_VALUE)'
 
+GO15VENDOREXPERIMENT := 1
+export GO15VENDOREXPERIMENT
+
 .PHONY: all
 all: clean lint build test coverage.html crossbuild
 
@@ -43,7 +46,12 @@ list-deps:
 .PHONY: lint
 lint: deps
 	$(GOPATH)/bin/gometalinter --disable-all \
-		-E goimports -E gofmt -E goconst -E deadcode -E golint -E vet \
+		-E deadcode \
+		-E goconst \
+		-E gofmt \
+		-E goimports \
+		-E golint \
+		-E vet \
 		--deadline=1m --vendor . ./cmd/*/
 
 .PHONY: build

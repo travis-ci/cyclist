@@ -3,6 +3,8 @@ package cyclist
 import (
 	"fmt"
 
+	"github.com/Sirupsen/logrus"
+
 	"gopkg.in/urfave/cli.v2"
 )
 
@@ -17,6 +19,11 @@ var (
 	GeneratedString = "?"
 	// CopyrightString is legalese!
 	CopyrightString = "?"
+
+	// RedisNamespace is the namespace used in redis OK!
+	RedisNamespace = "cyclist"
+
+	log *logrus.Logger
 )
 
 func init() {

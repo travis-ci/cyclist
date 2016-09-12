@@ -5,7 +5,7 @@
 			"importpath": "github.com/Sirupsen/logrus",
 			"repository": "https://github.com/Sirupsen/logrus",
 			"vcs": "git",
-			"revision": "32055c351ea8b00b96d70f28db48d9840feaf0ec",
+			"revision": "3ec0642a7fb6488f65b06f9040adc67e3990296a",
 			"branch": "master",
 			"notests": true
 		},
@@ -73,228 +73,12 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/aws/aws-sdk-go/service/acm",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/acm",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/apigateway",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/apigateway",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/applicationdiscoveryservice",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/applicationdiscoveryservice",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/aws/aws-sdk-go/service/autoscaling",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
+			"revision": "1eda36db14da389a03c5e7d41f2172e353c2ce57",
 			"branch": "master",
 			"path": "service/autoscaling",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/cloudformation",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/cloudformation",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/cloudfront",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/cloudfront",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/cloudhsm",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/cloudhsm",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/cloudsearch",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/cloudsearch",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/cloudsearchdomain",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/cloudsearchdomain",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/cloudtrail",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/cloudtrail",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/cloudwatch",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/cloudwatch",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/cloudwatchevents",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/cloudwatchevents",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/cloudwatchlogs",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/cloudwatchlogs",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/codecommit",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/codecommit",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/codedeploy",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/codedeploy",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/codepipeline",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/codepipeline",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/cognitoidentity",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/cognitoidentity",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/cognitosync",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/cognitosync",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/configservice",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/configservice",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/datapipeline",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/datapipeline",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/devicefarm",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/devicefarm",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/directconnect",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/directconnect",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/directoryservice",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/directoryservice",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/dynamodb",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/dynamodb",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/dynamodbstreams",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/dynamodbstreams",
 			"notests": true
 		},
 		{
@@ -307,262 +91,10 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/aws/aws-sdk-go/service/ecr",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/ecr",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/ecs",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/ecs",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/efs",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/efs",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/elasticache",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/elasticache",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/elasticbeanstalk",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/elasticbeanstalk",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/elasticsearchservice",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/elasticsearchservice",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/elastictranscoder",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/elastictranscoder",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/elb",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/elb",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/emr",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/emr",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/firehose",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/firehose",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/glacier",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/glacier",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/iam",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/iam",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/inspector",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/inspector",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/iot",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/iot",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/kinesis",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/kinesis",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/kms",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/kms",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/lambda",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/lambda",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/machinelearning",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/machinelearning",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/marketplacecommerceanalytics",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/marketplacecommerceanalytics",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/mobileanalytics",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/mobileanalytics",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/opsworks",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/opsworks",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/rds",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/rds",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/redshift",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/redshift",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/route53",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/route53",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/route53domains",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/route53domains",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/s3",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/s3",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/ses",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/ses",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/simpledb",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/simpledb",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/aws/aws-sdk-go/service/sns",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
+			"revision": "1eda36db14da389a03c5e7d41f2172e353c2ce57",
 			"branch": "master",
 			"path": "/service/sns",
 			"notests": true
@@ -571,72 +103,9 @@
 			"importpath": "github.com/aws/aws-sdk-go/service/sqs",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
+			"revision": "1eda36db14da389a03c5e7d41f2172e353c2ce57",
 			"branch": "master",
 			"path": "service/sqs",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/ssm",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/ssm",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/storagegateway",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/storagegateway",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/sts",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/sts",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/support",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/support",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/swf",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/swf",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/waf",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/waf",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/aws/aws-sdk-go/service/workspaces",
-			"repository": "https://github.com/aws/aws-sdk-go",
-			"vcs": "git",
-			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
-			"branch": "master",
-			"path": "service/workspaces",
 			"notests": true
 		},
 		{
@@ -655,6 +124,22 @@
 			"revision": "3c37d29820480639ff03fd66df00a0f27984f88d",
 			"branch": "master",
 			"path": "vendor/github.com/jmespath/go-jmespath",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/certifi/gocertifi",
+			"repository": "https://github.com/certifi/gocertifi",
+			"vcs": "git",
+			"revision": "ec89d50f00d39494f5b3ec5cf2fe75c53467a937",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/getsentry/raven-go",
+			"repository": "https://github.com/getsentry/raven-go",
+			"vcs": "git",
+			"revision": "379f8d0a68ca237cf8893a1cdfd4f574125e2c51",
+			"branch": "master",
 			"notests": true
 		},
 		{
@@ -696,7 +181,7 @@
 			"importpath": "github.com/gorilla/mux",
 			"repository": "https://github.com/gorilla/mux",
 			"vcs": "git",
-			"revision": "9fa818a44c2bf1396a17f9d5a3c0f6dd39d2ff8e",
+			"revision": "0a192a193177452756c362c20087ddafcf6829c4",
 			"branch": "master",
 			"notests": true
 		},
@@ -737,6 +222,22 @@
 			"repository": "https://github.com/onsi/gomega",
 			"vcs": "git",
 			"revision": "9574b2d94c03faf63bf1b296e21d9db950006ea4",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/pborman/uuid",
+			"repository": "https://github.com/pborman/uuid",
+			"vcs": "git",
+			"revision": "b984ec7fa9ff9e428bd0cf0abf429384dfbe3e37",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/pkg/errors",
+			"repository": "https://github.com/pkg/errors",
+			"vcs": "git",
+			"revision": "17b591df37844cde689f4d5813e5cea0927d8dd2",
 			"branch": "master",
 			"notests": true
 		},
@@ -805,7 +306,7 @@
 			"importpath": "github.com/urfave/negroni",
 			"repository": "https://github.com/urfave/negroni",
 			"vcs": "git",
-			"revision": "dc6b9d037e8dab60cbfc09c61d6932537829be8b",
+			"revision": "3f7ce7b928e14ff890b067e5bbbc80af73690a9c",
 			"branch": "master",
 			"notests": true
 		},
@@ -855,7 +356,7 @@
 			"importpath": "gopkg.in/urfave/cli.v2",
 			"repository": "https://gopkg.in/urfave/cli.v2",
 			"vcs": "git",
-			"revision": "2b959bd8919d1110df44ec9a839e25a739906c3c",
+			"revision": "c72728f42438425ffcd487986936357e17ebba3f",
 			"branch": "v2",
 			"notests": true
 		},

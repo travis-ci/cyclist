@@ -8,23 +8,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/gorilla/feeds"
 	"github.com/gorilla/mux"
-	"github.com/travis-ci/pudding/db"
+	"github.com/pborman/uuid"
 )
 
-// TODO: implement db with redis connection pool
-
-// instanceLifecycleTransition is an event received from instances when launching and terminating
-// Transition can be launching or terminating
-type instanceLifecycleTransition struct {
-	ID         string `json:"id,omitempty"`
-	InstanceID string `json:"instance_id"`
-	Transition string `json:"transition"`
-}
-
-func handleInstanceLifecycleTransition(t instanceLifecycleTransition) error {
-	action, err := db.FetchInstanceLifecycleAction(rc, t.Transition, t.InstanceID)
+func handleLifecycleTransition(awsRegion string, t *lifecycleTransition) error {
+	rc := dbPool.Get()
+	action, err := fetchInstanceLifecycleAction(rc, t.Transition, t.InstanceID)
 	if err != nil {
 		return err
 	}
@@ -41,18 +31,18 @@ func handleInstanceLifecycleTransition(t instanceLifecycleTransition) error {
 		})
 
 	input := &autoscaling.CompleteLifecycleActionInput{
-		AutoScalingGroupName:  action.AutoScalingGroupName,
-		InstanceId:            t.InstanceID,
-		LifecycleActionResult: "CONTINUE",
-		LifecycleActionToken:  action.LifecycleActionToken,
-		LifecycleHookName:     action.LifecycleHookName,
+		AutoScalingGroupName:  aws.String(action.AutoScalingGroupName),
+		InstanceId:            aws.String(t.InstanceID),
+		LifecycleActionResult: aws.String("CONTINUE"),
+		LifecycleActionToken:  aws.String(action.LifecycleActionToken),
+		LifecycleHookName:     aws.String(action.LifecycleHookName),
 	}
 	_, err = svc.CompleteLifecycleAction(input)
 	if err != nil {
 		return err
 	}
 
-	err = db.WipeInstanceLifecycleAction(rc, t.Transition, t.InstanceID)
+	err = wipeInstanceLifecycleAction(rc, t.Transition, t.InstanceID)
 	if err != nil {
 		log.WithField("err", err).Warn("failed to clean up lifecycle action bits")
 	}
@@ -60,7 +50,7 @@ func handleInstanceLifecycleTransition(t instanceLifecycleTransition) error {
 	return nil
 }
 
-func newStatusGetHandlerFunc() http.HandlerFunc {
+func newStatusGetHandlerFunc(awsRegion string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// vars := mux.Vars(request)
 		// instanceID := vars["instanceID"]
@@ -69,23 +59,22 @@ func newStatusGetHandlerFunc() http.HandlerFunc {
 	}
 }
 
-func newStatusPutHandlerFunc() http.HandlerFunc {
+func newStatusPutHandlerFunc(awsRegion string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(request)
-		instanceID := vars["instanceID"]
+		vars := mux.Vars(r)
+		instanceID := vars["instance_id"]
 
-		// TODO: remove feeds dependency
-		t := &instanceLifecycleTransition{}
-		t.ID = feeds.NewUUID().String()
+		t := &lifecycleTransition{}
+		t.ID = uuid.NewUUID().String()
 		t.InstanceID = instanceID
 
-		err := json.NewDecoder(req.Body).Decode(t)
+		err := json.NewDecoder(r.Body).Decode(t)
 		if err != nil {
 			fmt.Fprintf(w, "invalid json received: %s\n", err)
 			return
 		}
 
-		err = handleInstanceLifecycleTransition(t)
+		err = handleLifecycleTransition(awsRegion, t)
 		if err != nil {
 			fmt.Fprintf(w, "handling lifecycle transition falied: %s\n", err)
 			return
