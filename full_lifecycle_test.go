@@ -43,7 +43,7 @@ func TestFullLifecycleManagementHTTP(t *testing.T) {
 }
 
 type fullLifecycleManagementHTTP struct {
-	bag map[string]string
+	vars map[string]string
 
 	t   *testing.T
 	srv *server
@@ -53,7 +53,7 @@ type fullLifecycleManagementHTTP struct {
 
 func newFullLifecycleManagementHTTP(t *testing.T) *fullLifecycleManagementHTTP {
 	return &fullLifecycleManagementHTTP{
-		bag: map[string]string{
+		vars: map[string]string{
 			"instance_id": fmt.Sprintf("i-fa%d%d%d", rand.Int(), rand.Int(), rand.Int())[:10],
 		},
 
@@ -62,7 +62,7 @@ func newFullLifecycleManagementHTTP(t *testing.T) *fullLifecycleManagementHTTP {
 }
 
 func (f *fullLifecycleManagementHTTP) Run(ctx *cli.Context) error {
-	f.t.Logf("starting lifecycle test for instance %q", f.bag["instance_id"])
+	f.t.Logf("starting lifecycle test for instance %q", f.vars["instance_id"])
 	f.t.Logf("initializing server")
 	f.stepInitServer(ctx)
 	defer f.ts.Close()
@@ -71,14 +71,14 @@ func (f *fullLifecycleManagementHTTP) Run(ctx *cli.Context) error {
 		desc     string
 		stepFunc func()
 	}{
-		{"handling SNS subscription confirmation", f.stepHandleSubscriptionConfirmation},
-		{"handling SNS test notification", f.stepHandleTestNotification},
-		{"handling SNS instance launching notification", f.stepHandleInstanceLaunchingNotification},
-		{"handling instance launching confirmation", f.stepHandleInstanceLaunchingConfirmation},
-		{"handling heartbeat while up", f.stepHandleHeartbeatWhileUp},
-		{"handling SNS instance terminating notification", f.stepHandleInstanceTerminatingNotification},
-		{"handling heartbeat while down", f.stepHandleHeartbeatWhileDown},
-		{"handling instance terminating confirmation", f.stepHandleInstanceTerminatingConfirmation},
+		{"SNS subscription confirmation", f.stepSubscriptionConfirmation},
+		{"SNS test notification", f.stepTestNotification},
+		{"SNS instance launching notification", f.stepInstanceLaunchingNotification},
+		{"instance launching confirmation", f.stepInstanceLaunchingConfirmation},
+		{"heartbeat while up", f.stepHeartbeatWhileUp},
+		{"SNS instance terminating notification", f.stepInstanceTerminatingNotification},
+		{"heartbeat while down", f.stepHeartbeatWhileDown},
+		{"instance terminating confirmation", f.stepInstanceTerminatingConfirmation},
 	}
 
 	nSteps := len(steps)
@@ -87,7 +87,7 @@ func (f *fullLifecycleManagementHTTP) Run(ctx *cli.Context) error {
 		step.stepFunc()
 	}
 
-	f.t.Logf("done with lifecycle test for instance %q", f.bag["instance_id"])
+	f.t.Logf("done with lifecycle test for instance %q", f.vars["instance_id"])
 	return nil
 }
 
@@ -114,9 +114,10 @@ func (f *fullLifecycleManagementHTTP) stepInitServer(ctx *cli.Context) {
 
 func (f *fullLifecycleManagementHTTP) autoScalingCallback(req *request.Request) {
 	if v, ok := req.Params.(*autoscaling.CompleteLifecycleActionInput); ok {
-		assert.Equal(f.t, *v.InstanceId, f.bag["instance_id"])
+		assert.Equal(f.t, *v.InstanceId, f.vars["instance_id"])
 		assert.Equal(f.t, *v.LifecycleActionResult, "CONTINUE")
-		assert.Equal(f.t, *v.LifecycleActionToken, f.bag[fmt.Sprintf("instance_%s_token", f.bag["lifecycle_action"])])
+		assert.Equal(f.t, *v.LifecycleActionToken, f.vars[fmt.Sprintf("instance_%s_token", f.vars["lifecycle_action"])])
+		f.vars[fmt.Sprintf("instance_%s_state", f.vars["lifecycle_action"])] = "completed"
 		return
 	}
 	req.Error = errors.New("is not good")
@@ -124,17 +125,19 @@ func (f *fullLifecycleManagementHTTP) autoScalingCallback(req *request.Request) 
 
 func (f *fullLifecycleManagementHTTP) snsCallback(req *request.Request) {
 	if v, ok := req.Params.(*sns.ConfirmSubscriptionInput); ok {
-		assert.Equal(f.t, *v.Token, f.bag["sns_subscription_token"])
+		assert.Equal(f.t, *v.Token, f.vars["sns_subscription_token"])
+		f.vars["sns_subscription_state"] = "confirmed"
 		return
 	}
 	req.Error = errors.New("nope nope nope")
 }
 
-func (f *fullLifecycleManagementHTTP) stepHandleSubscriptionConfirmation() {
-	f.bag["sns_subscription_token"] = uuid.NewUUID().String()
+func (f *fullLifecycleManagementHTTP) stepSubscriptionConfirmation() {
+	f.vars["sns_subscription_state"] = "unconfirmed"
+	f.vars["sns_subscription_token"] = uuid.NewUUID().String()
 	msg := &snsMessage{
 		Type:     "SubscriptionConfirmation",
-		Token:    f.bag["sns_subscription_token"],
+		Token:    f.vars["sns_subscription_token"],
 		TopicARN: "arn:aws:sns:nz-isengard-1:999999999999:toaster-pastries",
 	}
 	msgBuf := &bytes.Buffer{}
@@ -144,9 +147,10 @@ func (f *fullLifecycleManagementHTTP) stepHandleSubscriptionConfirmation() {
 	res, err := http.Post(fmt.Sprintf("%s/sns", f.ts.URL), "application/json", msgBuf)
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
+	assert.Equal(f.t, "confirmed", f.vars["sns_subscription_state"])
 }
 
-func (f *fullLifecycleManagementHTTP) stepHandleTestNotification() {
+func (f *fullLifecycleManagementHTTP) stepTestNotification() {
 	msgMsgBuf := &bytes.Buffer{}
 	msgMsg := &lifecycleAction{
 		Event: "autoscaling:TEST_NOTIFICATION",
@@ -168,14 +172,15 @@ func (f *fullLifecycleManagementHTTP) stepHandleTestNotification() {
 	assert.Equal(f.t, 202, res.StatusCode)
 }
 
-func (f *fullLifecycleManagementHTTP) stepHandleInstanceLaunchingNotification() {
-	f.bag["lifecycle_action"] = "launching"
-	f.bag["instance_launching_token"] = uuid.NewUUID().String()
+func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingNotification() {
+	f.vars["lifecycle_action"] = "launching"
+	f.vars["instance_launching_state"] = "pending"
+	f.vars["instance_launching_token"] = uuid.NewUUID().String()
 	msgMsgBuf := &bytes.Buffer{}
 	msgMsg := &lifecycleAction{
 		LifecycleTransition:  "autoscaling:EC2_INSTANCE_LAUNCHING",
-		EC2InstanceID:        f.bag["instance_id"],
-		LifecycleActionToken: f.bag["instance_launching_token"],
+		EC2InstanceID:        f.vars["instance_id"],
+		LifecycleActionToken: f.vars["instance_launching_token"],
 		AutoScalingGroupName: "cyclist-integration-test-asg",
 		LifecycleHookName:    "cyclist-integration-test-lch-launching",
 	}
@@ -195,13 +200,14 @@ func (f *fullLifecycleManagementHTTP) stepHandleInstanceLaunchingNotification() 
 	assert.NotNil(f.t, res)
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	la, err := f.db.fetchInstanceLifecycleAction("launching", f.bag["instance_id"])
+	la, err := f.db.fetchInstanceLifecycleAction("launching", f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, la)
+	assert.Equal(f.t, "pending", f.vars["instance_launching_state"])
 }
 
-func (f *fullLifecycleManagementHTTP) stepHandleInstanceLaunchingConfirmation() {
-	res, err := http.Post(fmt.Sprintf("%s/launches/%s", f.ts.URL, f.bag["instance_id"]),
+func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
+	res, err := http.Post(fmt.Sprintf("%s/launches/%s", f.ts.URL, f.vars["instance_id"]),
 		"application/octet-stream", &bytes.Buffer{})
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
@@ -211,17 +217,18 @@ func (f *fullLifecycleManagementHTTP) stepHandleInstanceLaunchingConfirmation() 
 	assert.JSONEq(f.t, `{"message": "instance launch complete"}`, string(body))
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	la, err := f.db.fetchInstanceLifecycleAction("launching", f.bag["instance_id"])
+	la, err := f.db.fetchInstanceLifecycleAction("launching", f.vars["instance_id"])
 	assert.Nil(f.t, la)
 	assert.NotNil(f.t, err)
 
-	state, err := f.db.fetchInstanceState(f.bag["instance_id"])
+	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "up", state)
+	assert.Equal(f.t, "completed", f.vars["instance_launching_state"])
 }
 
-func (f *fullLifecycleManagementHTTP) stepHandleHeartbeatWhileUp() {
-	res, err := http.Get(fmt.Sprintf("%s/heartbeats/%s", f.ts.URL, f.bag["instance_id"]))
+func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileUp() {
+	res, err := http.Get(fmt.Sprintf("%s/heartbeats/%s", f.ts.URL, f.vars["instance_id"]))
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
 
@@ -230,19 +237,20 @@ func (f *fullLifecycleManagementHTTP) stepHandleHeartbeatWhileUp() {
 	assert.JSONEq(f.t, `{"state": "up"}`, string(body))
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	state, err := f.db.fetchInstanceState(f.bag["instance_id"])
+	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "up", state)
 }
 
-func (f *fullLifecycleManagementHTTP) stepHandleInstanceTerminatingNotification() {
-	f.bag["lifecycle_action"] = "terminating"
-	f.bag["instance_terminating_token"] = uuid.NewUUID().String()
+func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingNotification() {
+	f.vars["lifecycle_action"] = "terminating"
+	f.vars["instance_terminating_state"] = "pending"
+	f.vars["instance_terminating_token"] = uuid.NewUUID().String()
 	msgMsgBuf := &bytes.Buffer{}
 	msgMsg := &lifecycleAction{
 		LifecycleTransition:  "autoscaling:EC2_INSTANCE_TERMINATING",
-		EC2InstanceID:        f.bag["instance_id"],
-		LifecycleActionToken: f.bag["instance_terminating_token"],
+		EC2InstanceID:        f.vars["instance_id"],
+		LifecycleActionToken: f.vars["instance_terminating_token"],
 		AutoScalingGroupName: "cyclist-integration-test-asg",
 		LifecycleHookName:    "cyclist-integration-test-lch-terminating",
 	}
@@ -262,17 +270,17 @@ func (f *fullLifecycleManagementHTTP) stepHandleInstanceTerminatingNotification(
 	assert.NotNil(f.t, res)
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	la, err := f.db.fetchInstanceLifecycleAction("terminating", f.bag["instance_id"])
+	la, err := f.db.fetchInstanceLifecycleAction("terminating", f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, la)
 
-	state, err := f.db.fetchInstanceState(f.bag["instance_id"])
+	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "down", state)
 }
 
-func (f *fullLifecycleManagementHTTP) stepHandleHeartbeatWhileDown() {
-	res, err := http.Get(fmt.Sprintf("%s/heartbeats/%s", f.ts.URL, f.bag["instance_id"]))
+func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileDown() {
+	res, err := http.Get(fmt.Sprintf("%s/heartbeats/%s", f.ts.URL, f.vars["instance_id"]))
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
 
@@ -281,13 +289,13 @@ func (f *fullLifecycleManagementHTTP) stepHandleHeartbeatWhileDown() {
 	assert.JSONEq(f.t, `{"state": "down"}`, string(body))
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	state, err := f.db.fetchInstanceState(f.bag["instance_id"])
+	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "down", state)
 }
 
-func (f *fullLifecycleManagementHTTP) stepHandleInstanceTerminatingConfirmation() {
-	res, err := http.Post(fmt.Sprintf("%s/terminations/%s", f.ts.URL, f.bag["instance_id"]),
+func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
+	res, err := http.Post(fmt.Sprintf("%s/terminations/%s", f.ts.URL, f.vars["instance_id"]),
 		"application/octet-stream", &bytes.Buffer{})
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
@@ -297,13 +305,14 @@ func (f *fullLifecycleManagementHTTP) stepHandleInstanceTerminatingConfirmation(
 	assert.JSONEq(f.t, `{"message": "instance termination complete"}`, string(body))
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	la, err := f.db.fetchInstanceLifecycleAction("terminating", f.bag["instance_id"])
+	la, err := f.db.fetchInstanceLifecycleAction("terminating", f.vars["instance_id"])
 	assert.Nil(f.t, la)
 	assert.NotNil(f.t, err)
 
-	state, err := f.db.fetchInstanceState(f.bag["instance_id"])
+	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.NotNil(f.t, err)
 	assert.Equal(f.t, "", state)
+	assert.Equal(f.t, "completed", f.vars["instance_terminating_state"])
 
 	assert.Len(f.t, f.db.(*testRepo).s, 0)
 	assert.Len(f.t, f.db.(*testRepo).la, 0)
