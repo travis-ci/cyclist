@@ -20,15 +20,15 @@ type sqsHandler struct {
 	queueURL    string
 	concurrency int
 
-	db repo
-	l  *logrus.Logger
-	a  autoscalingiface.AutoScalingAPI
-	n  snsiface.SNSAPI
-	s  sqsiface.SQSAPI
+	db     repo
+	log    *logrus.Logger
+	asSvc  autoscalingiface.AutoScalingAPI
+	snsSvc snsiface.SNSAPI
+	sqsSvc sqsiface.SQSAPI
 }
 
 func (sh *sqsHandler) Run(ctx context.Context) error {
-	sh.l.WithField("queue_url", sh.queueURL).Debug("fetching queue attributes")
+	sh.log.WithField("queue_url", sh.queueURL).Debug("fetching queue attributes")
 
 	params := &sqs.GetQueueAttributesInput{
 		QueueUrl: aws.String(sh.queueURL),
@@ -37,13 +37,13 @@ func (sh *sqsHandler) Run(ctx context.Context) error {
 		},
 	}
 
-	resp, err := sh.s.GetQueueAttributes(params)
+	resp, err := sh.sqsSvc.GetQueueAttributes(params)
 	if err != nil {
 		return err
 	}
 
-	sh.l.WithField("queue_attrs", resp.Attributes).Debug("fetched queue attributes")
-	sh.l.WithField("concurrency", sh.concurrency).Debug("starting SQS consumers")
+	sh.log.WithField("queue_attrs", resp.Attributes).Debug("fetched queue attributes")
+	sh.log.WithField("concurrency", sh.concurrency).Debug("starting SQS consumers")
 
 	wg := &sync.WaitGroup{}
 
@@ -81,13 +81,13 @@ func (sh *sqsHandler) runOne(wg *sync.WaitGroup, ctx context.Context) {
 			wg.Done()
 			return
 		default:
-			sh.l.WithField("params", params).Debug("receiving")
+			sh.log.WithField("params", params).Debug("receiving")
 		}
 
-		resp, err := sh.s.ReceiveMessage(params)
+		resp, err := sh.sqsSvc.ReceiveMessage(params)
 		if err != nil {
 			ae := err.(awserr.Error)
-			sh.l.WithFields(logrus.Fields{
+			sh.log.WithFields(logrus.Fields{
 				"errcode": ae.Code(),
 				"errmsg":  ae.Message(),
 				"err":     ae.OrigErr(),
@@ -104,6 +104,6 @@ func (sh *sqsHandler) runOne(wg *sync.WaitGroup, ctx context.Context) {
 }
 
 func (sh *sqsHandler) handle(message *sqs.Message) {
-	sh.l.WithField("msg", message).Debug("not really handling")
+	sh.log.WithField("msg", message).Debug("not really handling")
 	return
 }

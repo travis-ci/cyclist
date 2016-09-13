@@ -108,10 +108,10 @@ func runServe(ctx *cli.Context) error {
 	return (&server{
 		port: port,
 
-		db: db,
-		l:  log,
-		a:  asSvc,
-		s:  snsSvc,
+		db:     db,
+		log:    log,
+		asSvc:  asSvc,
+		snsSvc: snsSvc,
 	}).Serve()
 }
 
@@ -143,11 +143,11 @@ func runSqs(ctx *cli.Context) error {
 		queueURL:    sqsQueueURL,
 		concurrency: ctx.Int("concurrency"),
 
-		db: db,
-		l:  log,
-		a:  asSvc,
-		n:  snsSvc,
-		s:  sqsSvc,
+		db:     db,
+		log:    log,
+		asSvc:  asSvc,
+		snsSvc: snsSvc,
+		sqsSvc: sqsSvc,
 	}).Run(cntx)
 }
 

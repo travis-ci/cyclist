@@ -16,10 +16,10 @@ func newTestServer() *server {
 	srv := &server{
 		port: "17321",
 
-		db: newTestRepo(),
-		l:  shushLog,
-		a:  newTestAutosScalingService(nil),
-		s:  newTestSNSService(nil),
+		db:     newTestRepo(),
+		log:    shushLog,
+		asSvc:  newTestAutosScalingService(nil),
+		snsSvc: newTestSNSService(nil),
 	}
 	srv.setupRouter()
 	return srv
@@ -27,7 +27,7 @@ func newTestServer() *server {
 
 func TestServer_POST_sns_Confirmation(t *testing.T) {
 	srv := newTestServer()
-	ts := httptest.NewServer(srv.r)
+	ts := httptest.NewServer(srv.router)
 	defer ts.Close()
 
 	msg := &snsMessage{
@@ -53,7 +53,7 @@ func TestServer_POST_sns_Confirmation(t *testing.T) {
 
 func TestServer_POST_sns_Notification_UnknownLifecycleTransition(t *testing.T) {
 	srv := newTestServer()
-	ts := httptest.NewServer(srv.r)
+	ts := httptest.NewServer(srv.router)
 	defer ts.Close()
 
 	msgMsg := &lifecycleAction{
@@ -86,7 +86,7 @@ func TestServer_POST_sns_Notification_UnknownLifecycleTransition(t *testing.T) {
 
 func TestServer_POST_sns_Notification_TestEvent(t *testing.T) {
 	srv := newTestServer()
-	ts := httptest.NewServer(srv.r)
+	ts := httptest.NewServer(srv.router)
 	defer ts.Close()
 
 	msgMsg := &lifecycleAction{
@@ -118,7 +118,7 @@ func TestServer_POST_sns_Notification_TestEvent(t *testing.T) {
 
 func TestServer_POST_sns_Notification_InstanceLaunchingLifecycleTransition(t *testing.T) {
 	srv := newTestServer()
-	ts := httptest.NewServer(srv.r)
+	ts := httptest.NewServer(srv.router)
 	defer ts.Close()
 
 	msgMsg := &lifecycleAction{
@@ -151,7 +151,7 @@ func TestServer_POST_sns_Notification_InstanceLaunchingLifecycleTransition(t *te
 
 func TestServer_POST_sns_Notification_InstanceTerminatingLifecycleTransition(t *testing.T) {
 	srv := newTestServer()
-	ts := httptest.NewServer(srv.r)
+	ts := httptest.NewServer(srv.router)
 	defer ts.Close()
 
 	msgMsg := &lifecycleAction{
@@ -186,7 +186,7 @@ func TestServer_POST_sns_Notification_InstanceTerminatingLifecycleTransition(t *
 func TestServer_GET_heartbeats(t *testing.T) {
 	srv := newTestServer()
 	_ = srv.db.setInstanceState("i-fafafaf", "up")
-	ts := httptest.NewServer(srv.r)
+	ts := httptest.NewServer(srv.router)
 	defer ts.Close()
 
 	res, err := http.Get(fmt.Sprintf("%s/heartbeats/i-fafafaf", ts.URL))
@@ -203,7 +203,7 @@ func TestServer_GET_heartbeats(t *testing.T) {
 
 func TestServer_POST_launches(t *testing.T) {
 	srv := newTestServer()
-	ts := httptest.NewServer(srv.r)
+	ts := httptest.NewServer(srv.router)
 	defer ts.Close()
 
 	err := srv.db.storeInstanceLifecycleAction(&lifecycleAction{
