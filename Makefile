@@ -22,9 +22,6 @@ GOBUILD_LDFLAGS ?= \
 	-X '$(GENERATED_VAR)=$(GENERATED_VALUE)' \
 	-X '$(COPYRIGHT_VAR)=$(COPYRIGHT_VALUE)'
 
-GO15VENDOREXPERIMENT := 1
-export GO15VENDOREXPERIMENT
-
 .PHONY: all
 all: clean lint build test coverage.html crossbuild
 

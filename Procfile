@@ -1,2 +1,2 @@
 web: cyclist serve --port $PORT
-worker: cyclist handle-sqs
+worker: cyclist sqs
