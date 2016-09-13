@@ -1,14 +1,17 @@
 package cyclist
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"net/http"
+	"os"
+	"os/signal"
+	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
-	"github.com/meatballhat/negroni-logrus"
-	"github.com/urfave/negroni"
+
 	"gopkg.in/urfave/cli.v2"
 )
 
@@ -24,7 +27,21 @@ func NewCLI() *cli.App {
 				Aliases: []string{"r"},
 				Value:   "us-east-1",
 				Usage:   "AWS region to use for the stuff",
-				EnvVars: []string{"TRAVIS_CYCLIST_AWS_REGION", "AWS_REGION"},
+				EnvVars: []string{"CYCLIST_AWS_REGION", "AWS_REGION"},
+			},
+			&cli.StringFlag{
+				Name:    "redis-url",
+				Value:   "redis://localhost:6379/0",
+				Usage:   "the `REDIS_URL` used for cruddy fun",
+				Aliases: []string{"R"},
+				EnvVars: []string{"CYCLIST_REDIS_URL", "REDIS_URL"},
+			},
+			&cli.BoolFlag{
+				Name:    "debug",
+				Value:   false,
+				Usage:   "set log level to debug",
+				Aliases: []string{"D"},
+				EnvVars: []string{"CYCLIST_DEBUG", "DEBUG"},
 			},
 		},
 		Commands: []*cli.Command{
@@ -33,59 +50,101 @@ func NewCLI() *cli.App {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "port",
-						Value:   "[::1]:9753",
+						Value:   "127.0.0.1:9753",
 						Usage:   "the `PORT` (or full address) on which to serve",
 						Aliases: []string{"p"},
-						EnvVars: []string{"TRAVIS_CYCLIST_PORT", "PORT"},
+						EnvVars: []string{"CYCLIST_PORT", "PORT"},
 					},
 				},
 				Action: runServe,
+			},
+			{
+				Name: "sqs",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "queue-url",
+						Usage:   "the `QUEUE_URL` from which to receive messages",
+						Aliases: []string{"U"},
+						EnvVars: []string{"CYCLIST_QUEUE_URL", "QUEUE_URL"},
+					},
+					&cli.IntFlag{
+						Name:    "concurrency",
+						Value:   runtime.NumCPU() * 2,
+						Usage:   "the number of concurrent SQS workers to run",
+						Aliases: []string{"C"},
+						EnvVars: []string{"CYCLIST_CONCURRENCY", "CONCURRENCY"},
+					},
+				},
+				Action: runSqs,
 			},
 		},
 	}
 }
 
 func runServe(ctx *cli.Context) error {
+	err := setupSharedResources(ctx.Bool("debug"), ctx.String("redis-url"))
+	if err != nil {
+		return err
+	}
+
 	port := ctx.String("port")
 	if !strings.Contains(port, ":") {
-		port = fmt.Sprintf("[::1]:%s", port)
+		port = fmt.Sprintf("127.0.0.1:%s", port)
 	}
+
 	return newServer(port, ctx.String("aws-region")).Serve()
 }
 
-type server struct {
-	port, awsRegion string
-
-	r *mux.Router
-}
-
-func newServer(port, awsRegion string) *server {
-	srv := &server{port: port, awsRegion: awsRegion}
-	srv.setupRouter()
-	return srv
-}
-
-func (srv *server) ohai(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "ohai\n")
-}
-
-func (srv *server) Serve() error {
-	logrus.WithField("port", srv.port).Info("serving")
-
-	err := http.ListenAndServe(srv.port, negroni.New(
-		negroni.NewRecovery(),
-		negronilogrus.NewMiddleware(),
-		negroni.Wrap(srv.r),
-	))
-
-	if err != nil {
-		logrus.WithField("err", err).Error("failed to serve")
+func runSqs(ctx *cli.Context) error {
+	sqsQueueURL := ctx.String("queue-url")
+	if sqsQueueURL == "" {
+		return errors.New("missing SQS queue URL")
 	}
+
+	err := setupSharedResources(ctx.Bool("debug"), ctx.String("redis-url"))
+	if err != nil {
+		return err
+	}
+
+	cntx, cancel := context.WithCancel(context.Background())
+	go runSignalHandler(cancel)
+	return newSqsHandler(sqsQueueURL, ctx.Int("concurrency")).Run(cntx)
+}
+
+func setupSharedResources(debug bool, redisURL string) error {
+	var err error
+
+	log = logrus.New()
+	if debug {
+		log.Level = logrus.DebugLevel
+	}
+	log.WithField("level", log.Level).Debug("using log level")
+
+	dbPool, err = buildRedisPool(redisURL)
+	if err != nil {
+		return err
+	}
+	log.WithField("db_pool", dbPool).Debug("built database pool")
+
+	err = func() error {
+		rc := dbPool.Get()
+		defer rc.Close()
+		_, err = rc.Do("PING")
+		return err
+	}()
+
 	return err
 }
 
-func (srv *server) setupRouter() {
-	srv.r = mux.NewRouter()
-	srv.r.HandleFunc("/sns", newSnsHandlerFunc(srv.awsRegion)).Methods("POST")
-	srv.r.HandleFunc("/", srv.ohai).Methods("GET", "HEAD")
+func runSignalHandler(cancel context.CancelFunc) {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
+
+	for {
+		select {
+		case <-sigChan:
+			cancel()
+			os.Exit(0)
+		}
+	}
 }

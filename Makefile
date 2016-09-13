@@ -43,7 +43,12 @@ list-deps:
 .PHONY: lint
 lint: deps
 	$(GOPATH)/bin/gometalinter --disable-all \
-		-E goimports -E gofmt -E goconst -E deadcode -E golint -E vet \
+		-E deadcode \
+		-E goconst \
+		-E gofmt \
+		-E goimports \
+		-E golint \
+		-E vet \
 		--deadline=1m --vendor . ./cmd/*/
 
 .PHONY: build
