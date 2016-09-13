@@ -2,56 +2,68 @@ package cyclist
 
 import (
 	"context"
+	"crypto/rand"
+	"math/big"
 	"sync"
+	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
+	"github.com/aws/aws-sdk-go/service/sns/snsiface"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 )
 
 type sqsHandler struct {
 	queueURL    string
 	concurrency int
+
+	db     repo
+	log    *logrus.Logger
+	asSvc  autoscalingiface.AutoScalingAPI
+	snsSvc snsiface.SNSAPI
+	sqsSvc sqsiface.SQSAPI
 }
 
-func newSqsHandler(queueURL string, concurrency int) *sqsHandler {
-	return &sqsHandler{queueURL: queueURL, concurrency: concurrency}
-}
+func (sh *sqsHandler) Run(ctx context.Context) error {
+	sh.log.WithField("queue_url", sh.queueURL).Debug("fetching queue attributes")
 
-func (sl *sqsHandler) Run(ctx context.Context) error {
-	log.WithField("queue_url", sl.queueURL).Debug("fetching queue attributes")
-
-	svc := sqs.New(session.New())
 	params := &sqs.GetQueueAttributesInput{
-		QueueUrl: aws.String(sl.queueURL),
+		QueueUrl: aws.String(sh.queueURL),
 		AttributeNames: []*string{
 			aws.String("All"),
 		},
 	}
 
-	resp, err := svc.GetQueueAttributes(params)
+	resp, err := sh.sqsSvc.GetQueueAttributes(params)
 	if err != nil {
 		return err
 	}
 
-	log.WithField("queue_attrs", resp.Attributes).Debug("fetched queue attributes")
-	log.WithField("concurrency", sl.concurrency).Debug("starting SQS consumers")
+	sh.log.WithField("queue_attrs", resp.Attributes).Debug("fetched queue attributes")
+	sh.log.WithField("concurrency", sh.concurrency).Debug("starting SQS consumers")
 
 	wg := &sync.WaitGroup{}
 
-	for i := sl.concurrency; i > -1; i-- {
+	for i := sh.concurrency; i > -1; i-- {
 		wg.Add(1)
-		go sl.runOne(wg, ctx)
+		sleepMs, err := rand.Int(rand.Reader, big.NewInt(5000))
+		if err != nil {
+			return err
+		}
+		time.Sleep(time.Duration(sleepMs.Int64()) * time.Millisecond)
+		go sh.runOne(wg, ctx)
 	}
 
 	wg.Wait()
 	return nil
 }
 
-func (sl *sqsHandler) runOne(wg *sync.WaitGroup, ctx context.Context) {
-	svc := sqs.New(session.New())
+func (sh *sqsHandler) runOne(wg *sync.WaitGroup, ctx context.Context) {
 	params := &sqs.ReceiveMessageInput{
-		QueueUrl: aws.String(sl.queueURL),
+		QueueUrl: aws.String(sh.queueURL),
 		AttributeNames: []*string{
 			aws.String("All"),
 		},
@@ -69,20 +81,29 @@ func (sl *sqsHandler) runOne(wg *sync.WaitGroup, ctx context.Context) {
 			wg.Done()
 			return
 		default:
-			log.WithField("params", params).Debug("receiving")
+			sh.log.WithField("params", params).Debug("receiving")
 		}
 
-		resp, err := svc.ReceiveMessage(params)
-		if err == nil {
-			log.WithField("err", err).Error("failed to receive from SQS queue")
+		resp, err := sh.sqsSvc.ReceiveMessage(params)
+		if err != nil {
+			ae := err.(awserr.Error)
+			sh.log.WithFields(logrus.Fields{
+				"errcode": ae.Code(),
+				"errmsg":  ae.Message(),
+				"err":     ae.OrigErr(),
+			}).Error("failed to receive from SQS queue")
 			continue
 		}
 
-		handleSQSMessage(resp)
+		if resp.Messages != nil {
+			for _, message := range resp.Messages {
+				sh.handle(message)
+			}
+		}
 	}
 }
 
-func handleSQSMessage(resp *sqs.ReceiveMessageOutput) {
-	log.WithField("msg", resp).Debug("not really handling")
+func (sh *sqsHandler) handle(message *sqs.Message) {
+	sh.log.WithField("msg", message).Debug("not really handling")
 	return
 }

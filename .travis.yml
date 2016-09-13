@@ -2,6 +2,10 @@ language: go
 
 go: 1.7.1
 
+cache:
+  directories:
+  - "${HOME}/gopath/bin"
+
 env:
   global:
   - TRAVIS_COMMIT_SHORT="$(echo ${TRAVIS_COMMIT} | cut -b1-7)"

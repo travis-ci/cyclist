@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
 	"strings"
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/autoscaling"
+	"github.com/aws/aws-sdk-go/service/sns"
+	"github.com/aws/aws-sdk-go/service/sqs"
 
 	"gopkg.in/urfave/cli.v2"
 )
@@ -69,7 +73,7 @@ func NewCLI() *cli.App {
 					},
 					&cli.IntFlag{
 						Name:    "concurrency",
-						Value:   runtime.NumCPU() * 2,
+						Value:   2,
 						Usage:   "the number of concurrent SQS workers to run",
 						Aliases: []string{"C"},
 						EnvVars: []string{"CYCLIST_CONCURRENCY", "CONCURRENCY"},
@@ -82,17 +86,33 @@ func NewCLI() *cli.App {
 }
 
 func runServe(ctx *cli.Context) error {
-	err := setupSharedResources(ctx.Bool("debug"), ctx.String("redis-url"))
-	if err != nil {
-		return err
-	}
-
 	port := ctx.String("port")
 	if !strings.Contains(port, ":") {
 		port = fmt.Sprintf("127.0.0.1:%s", port)
 	}
 
-	return newServer(port, ctx.String("aws-region")).Serve()
+	dbPool, err := buildRedisPool(ctx.String("redis-url"))
+	if err != nil {
+		return err
+	}
+
+	db := &redisRepo{cg: dbPool}
+	log := buildLog(ctx.Bool("debug"))
+	snsSvc := sns.New(session.New(), &aws.Config{
+		Region: aws.String(ctx.String("aws-region")),
+	})
+	asSvc := autoscaling.New(session.New(), &aws.Config{
+		Region: aws.String(ctx.String("aws-region")),
+	})
+
+	return (&server{
+		port: port,
+
+		db:     db,
+		log:    log,
+		asSvc:  asSvc,
+		snsSvc: snsSvc,
+	}).Serve()
 }
 
 func runSqs(ctx *cli.Context) error {
@@ -101,39 +121,43 @@ func runSqs(ctx *cli.Context) error {
 		return errors.New("missing SQS queue URL")
 	}
 
-	err := setupSharedResources(ctx.Bool("debug"), ctx.String("redis-url"))
+	dbPool, err := buildRedisPool(ctx.String("redis-url"))
 	if err != nil {
 		return err
 	}
 
+	db := &redisRepo{cg: dbPool}
+	log := buildLog(ctx.Bool("debug"))
+	sqsSvc := sqs.New(session.New())
+	snsSvc := sns.New(session.New(), &aws.Config{
+		Region: aws.String(ctx.String("aws-region")),
+	})
+	asSvc := autoscaling.New(session.New(), &aws.Config{
+		Region: aws.String(ctx.String("aws-region")),
+	})
+
 	cntx, cancel := context.WithCancel(context.Background())
 	go runSignalHandler(cancel)
-	return newSqsHandler(sqsQueueURL, ctx.Int("concurrency")).Run(cntx)
+
+	return (&sqsHandler{
+		queueURL:    sqsQueueURL,
+		concurrency: ctx.Int("concurrency"),
+
+		db:     db,
+		log:    log,
+		asSvc:  asSvc,
+		snsSvc: snsSvc,
+		sqsSvc: sqsSvc,
+	}).Run(cntx)
 }
 
-func setupSharedResources(debug bool, redisURL string) error {
-	var err error
-
-	log = logrus.New()
+func buildLog(debug bool) *logrus.Logger {
+	log := logrus.New()
 	if debug {
 		log.Level = logrus.DebugLevel
 	}
 	log.WithField("level", log.Level).Debug("using log level")
-
-	dbPool, err = buildRedisPool(redisURL)
-	if err != nil {
-		return err
-	}
-	log.WithField("db_pool", dbPool).Debug("built database pool")
-
-	err = func() error {
-		rc := dbPool.Get()
-		defer rc.Close()
-		_, err = rc.Do("PING")
-		return err
-	}()
-
-	return err
+	return log
 }
 
 func runSignalHandler(cancel context.CancelFunc) {

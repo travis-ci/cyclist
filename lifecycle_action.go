@@ -1,5 +1,7 @@
 package cyclist
 
+import "strings"
+
 // lifecycleAction is an SNS message payload of the form:
 // {
 //   "AutoScalingGroupName":"name string",
@@ -23,4 +25,8 @@ type lifecycleAction struct {
 	LifecycleActionToken string `redis:"lifecycle_action_token"`
 	EC2InstanceID        string `json:"EC2InstanceId"`
 	LifecycleHookName    string `redis:"lifecycle_hook_name"`
+}
+
+func (la *lifecycleAction) Transition() string {
+	return strings.ToLower(strings.Replace(la.LifecycleTransition, "autoscaling:EC2_INSTANCE_", "", -1))
 }

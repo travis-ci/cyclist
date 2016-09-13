@@ -1,25 +1,28 @@
 package cyclist
 
 import (
-	"fmt"
 	"net/http"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 )
 
-func newInstanceHeartbeatHandlerFunc(awsRegion string) http.HandlerFunc {
+func newInstanceHeartbeatHandlerFunc(db repo, log *logrus.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		instanceID := vars["instance_id"]
 
 		log.WithField("instance_id", instanceID).Debug("fetching state")
-		state, err := fetchInstanceState(dbPool.Get(), instanceID)
+		state, err := db.fetchInstanceState(instanceID)
 		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, `{"error": %q}`, err.Error())
+			jsonRespond(w, http.StatusNotFound, &jsonErr{Err: err})
+			return
 		}
 
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"state":%q}`, state)
+		jsonRespond(w, http.StatusOK, &jsonInstanceState{State: state})
 	}
+}
+
+type jsonInstanceState struct {
+	State string `json:"state"`
 }
