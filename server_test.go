@@ -12,26 +12,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestServer(t *testing.T) {
-	srv := newServer("17321", "nz-mordor-1")
-	assert.NotNil(t, srv)
-	assert.NotNil(t, srv.r)
-	assert.Equal(t, "17321", srv.port)
-	assert.Equal(t, "nz-mordor-1", srv.awsRegion)
+func newTestServer() *server {
+	srv := &server{
+		port: "17321",
+
+		db: newTestRepo(),
+		l:  shushLog,
+		a:  newTestAutosScalingService(nil),
+		s:  newTestSNSService(nil),
+	}
+	srv.setupRouter()
+	return srv
 }
 
 func TestServer_POST_sns_Confirmation(t *testing.T) {
-	oldSg := sg
-	oldDbPool := dbPool
-	defer func() {
-		sg = oldSg
-		dbPool = oldDbPool
-	}()
-
-	sg = &testSNSGetter{}
-	dbPool = &testRedisConnGetter{}
-
-	srv := newServer("17321", "nz-mordor-1")
+	srv := newTestServer()
 	ts := httptest.NewServer(srv.r)
 	defer ts.Close()
 
@@ -57,17 +52,7 @@ func TestServer_POST_sns_Confirmation(t *testing.T) {
 }
 
 func TestServer_POST_sns_Notification_UnknownLifecycleTransition(t *testing.T) {
-	oldSg := sg
-	oldDbPool := dbPool
-	defer func() {
-		sg = oldSg
-		dbPool = oldDbPool
-	}()
-
-	sg = &testSNSGetter{}
-	dbPool = &testRedisConnGetter{}
-
-	srv := newServer("17321", "nz-mordor-1")
+	srv := newTestServer()
 	ts := httptest.NewServer(srv.r)
 	defer ts.Close()
 
@@ -100,17 +85,7 @@ func TestServer_POST_sns_Notification_UnknownLifecycleTransition(t *testing.T) {
 }
 
 func TestServer_POST_sns_Notification_TestEvent(t *testing.T) {
-	oldSg := sg
-	oldDbPool := dbPool
-	defer func() {
-		sg = oldSg
-		dbPool = oldDbPool
-	}()
-
-	sg = &testSNSGetter{}
-	dbPool = &testRedisConnGetter{}
-
-	srv := newServer("17321", "nz-mordor-1")
+	srv := newTestServer()
 	ts := httptest.NewServer(srv.r)
 	defer ts.Close()
 
@@ -142,17 +117,7 @@ func TestServer_POST_sns_Notification_TestEvent(t *testing.T) {
 }
 
 func TestServer_POST_sns_Notification_InstanceLaunchingLifecycleTransition(t *testing.T) {
-	oldSg := sg
-	oldDbPool := dbPool
-	defer func() {
-		sg = oldSg
-		dbPool = oldDbPool
-	}()
-
-	sg = &testSNSGetter{}
-	dbPool = &testRedisConnGetter{}
-
-	srv := newServer("17321", "nz-mordor-1")
+	srv := newTestServer()
 	ts := httptest.NewServer(srv.r)
 	defer ts.Close()
 
@@ -185,20 +150,7 @@ func TestServer_POST_sns_Notification_InstanceLaunchingLifecycleTransition(t *te
 }
 
 func TestServer_POST_sns_Notification_InstanceTerminatingLifecycleTransition(t *testing.T) {
-	oldSg := sg
-	oldDbPool := dbPool
-	defer func() {
-		sg = oldSg
-		dbPool = oldDbPool
-	}()
-
-	sg = &testSNSGetter{}
-	trcg := &testRedisConnGetter{}
-	_ = trcg.Get()
-	conn := trcg.Conn
-	dbPool = trcg
-
-	srv := newServer("17321", "nz-mordor-1")
+	srv := newTestServer()
 	ts := httptest.NewServer(srv.r)
 	defer ts.Close()
 
@@ -218,8 +170,6 @@ func TestServer_POST_sns_Notification_InstanceTerminatingLifecycleTransition(t *
 	err = json.NewEncoder(msgBuf).Encode(msg)
 	assert.Nil(t, err)
 
-	conn.Command("SET", "cyclist:instance:i-fafafaf:state", "down").Expect("OK!")
-
 	res, err := http.Post(fmt.Sprintf("%s/sns", ts.URL),
 		"application/json", msgBuf)
 	assert.Nil(t, err)
@@ -234,25 +184,12 @@ func TestServer_POST_sns_Notification_InstanceTerminatingLifecycleTransition(t *
 }
 
 func TestServer_GET_heartbeats(t *testing.T) {
-	oldSg := sg
-	oldDbPool := dbPool
-	defer func() {
-		sg = oldSg
-		dbPool = oldDbPool
-	}()
-
-	sg = &testSNSGetter{}
-	trcg := &testRedisConnGetter{}
-	_ = trcg.Get()
-	conn := trcg.Conn
-	dbPool = trcg
-
-	srv := newServer("17321", "nz-mordor-1")
+	srv := newTestServer()
+	_ = srv.db.setInstanceState("i-fafafaf", "up")
 	ts := httptest.NewServer(srv.r)
 	defer ts.Close()
 
-	conn.Command("GET", "cyclist:instance:705ffe63-3cd6-44e4-affc-f668d83173ea:state").Expect("up")
-	res, err := http.Get(fmt.Sprintf("%s/heartbeats/705ffe63-3cd6-44e4-affc-f668d83173ea", ts.URL))
+	res, err := http.Get(fmt.Sprintf("%s/heartbeats/i-fafafaf", ts.URL))
 	assert.Nil(t, err)
 
 	body := map[string]interface{}{}
@@ -265,36 +202,20 @@ func TestServer_GET_heartbeats(t *testing.T) {
 }
 
 func TestServer_POST_launches(t *testing.T) {
-	oldSg := sg
-	oldDbPool := dbPool
-	oldAg := ag
-	defer func() {
-		sg = oldSg
-		dbPool = oldDbPool
-		ag = oldAg
-	}()
-
-	sg = &testSNSGetter{}
-	trcg := &testRedisConnGetter{}
-	_ = trcg.Get()
-	conn := trcg.Conn
-	dbPool = trcg
-	ag = &testAutoScalingGetter{}
-
-	srv := newServer("17321", "nz-mordor-1")
+	srv := newTestServer()
 	ts := httptest.NewServer(srv.r)
 	defer ts.Close()
 
-	conn.Command("SISMEMBER", "cyclist:instance_launching", "705ffe63-3cd6-44e4-affc-f668d83173ea").Expect(int64(1))
-	conn.Command("HGETALL", "cyclist:instance_launching:705ffe63-3cd6-44e4-affc-f668d83173ea").ExpectMap(map[string]string{
-		"lifecycle_action_token":  "TOKEYTOKETOKTOKEYTOKETOKTOKEYTOKETOKTOKEYTOKETOKTOKEYTOKETOKTOKEYTOKETOK",
-		"lifecycle_hook_name":     "lesser-weasel-tin-hat",
-		"auto_scaling_group_name": "pinochle-box-sword-marker",
+	err := srv.db.storeInstanceLifecycleAction(&lifecycleAction{
+		LifecycleTransition:  "launching",
+		EC2InstanceID:        "i-fafafaf",
+		LifecycleActionToken: "TOKEYTOKETOK",
+		AutoScalingGroupName: "whimsical-mime-headphone",
+		LifecycleHookName:    "greased-banana-net",
 	})
+	assert.Nil(t, err)
 
-	res, err := http.Post(
-		fmt.Sprintf("%s/launches/705ffe63-3cd6-44e4-affc-f668d83173ea", ts.URL),
-		"application/json", &bytes.Buffer{})
+	res, err := http.Post(fmt.Sprintf("%s/launches/i-fafafaf", ts.URL), "application/json", &bytes.Buffer{})
 	assert.Nil(t, err)
 
 	bodyBytes, err := ioutil.ReadAll(res.Body)

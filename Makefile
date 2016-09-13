@@ -21,6 +21,10 @@ GOBUILD_LDFLAGS ?= \
 	-X '$(REV_URL_VAR)=$(REV_URL_VALUE)' \
 	-X '$(GENERATED_VAR)=$(GENERATED_VALUE)' \
 	-X '$(COPYRIGHT_VAR)=$(COPYRIGHT_VALUE)'
+DEPTOOLS := \
+	$(GOPATH)/bin/gvt \
+	$(GOPATH)/bin/gometalinter \
+	$(GOPATH)/bin/checkmake
 
 .PHONY: all
 all: clean lint build test coverage.html crossbuild
@@ -50,6 +54,7 @@ lint: deps
 		-E golint \
 		-E vet \
 		--deadline=1m --vendor . ./cmd/*/
+	$(GOPATH)/bin/checkmake Makefile
 
 .PHONY: build
 build: deps
@@ -73,7 +78,7 @@ distclean: clean
 	$(RM) vendor/.deps-fetched
 
 .PHONY: deps
-deps: $(GOPATH)/bin/gvt $(GOPATH)/bin/gometalinter vendor/.deps-fetched
+deps: $(DEPTOOLS) vendor/.deps-fetched
 
 vendor/.deps-fetched:
 	gvt rebuild
@@ -85,6 +90,13 @@ dev-server: $(GOPATH)/bin/reflex
 
 $(GOPATH)/bin/gvt:
 	go get github.com/FiloSottile/gvt
+
+$(GOPATH)/bin/checkmake:
+	go get github.com/mrtazz/checkmake/...
+
+$(GOPATH)/bin/gometalinter:
+	go get github.com/alecthomas/gometalinter
+	$@ --install
 
 $(GOPATH)/bin/reflex:
 	go get github.com/cespare/reflex
