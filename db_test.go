@@ -24,6 +24,13 @@ func TestRedisRepo_setInstanceState(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestRedisRepo_setInstanceState_WithEmptyInstanceID(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}}
+
+	err := rr.setInstanceState("", "denial")
+	assert.NotNil(t, err)
+}
+
 func TestRedisRepo_fetchInstanceState(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
@@ -41,6 +48,23 @@ func TestRedisRepo_fetchInstanceState_WithEmptyInstanceID(t *testing.T) {
 	state, err := rr.fetchInstanceState("")
 	assert.NotNil(t, err)
 	assert.Equal(t, "", state)
+}
+
+func TestRedisRepo_wipeInstanceState(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}}
+
+	conn := rr.cg.Get().(*redigomock.Conn)
+	conn.Command("DEL", "cyclist:instance:i-fafafaf:state").Expect("OK!")
+
+	err := rr.wipeInstanceState("i-fafafaf")
+	assert.Nil(t, err)
+}
+
+func TestRedisRepo_wipeInstanceState_WithEmptyInstanceID(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}}
+
+	err := rr.wipeInstanceState("")
+	assert.NotNil(t, err)
 }
 
 func TestRedisRepo_storeInstanceLifecycleAction(t *testing.T) {

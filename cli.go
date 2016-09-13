@@ -86,6 +86,14 @@ func NewCLI() *cli.App {
 }
 
 func runServe(ctx *cli.Context) error {
+	srv, err := runServeSetup(ctx)
+	if err != nil {
+		return err
+	}
+	return srv.Serve()
+}
+
+func runServeSetup(ctx *cli.Context) (*server, error) {
 	port := ctx.String("port")
 	if !strings.Contains(port, ":") {
 		port = fmt.Sprintf("127.0.0.1:%s", port)
@@ -93,7 +101,7 @@ func runServe(ctx *cli.Context) error {
 
 	dbPool, err := buildRedisPool(ctx.String("redis-url"))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	db := &redisRepo{cg: dbPool}
@@ -105,25 +113,34 @@ func runServe(ctx *cli.Context) error {
 		Region: aws.String(ctx.String("aws-region")),
 	})
 
-	return (&server{
+	return &server{
 		port: port,
 
 		db:     db,
 		log:    log,
 		asSvc:  asSvc,
 		snsSvc: snsSvc,
-	}).Serve()
+	}, nil
 }
 
 func runSqs(ctx *cli.Context) error {
+	sh, cntx, err := runSqsSetup(ctx)
+	if err != nil {
+		return err
+	}
+
+	return sh.Run(cntx)
+}
+
+func runSqsSetup(ctx *cli.Context) (*sqsHandler, context.Context, error) {
 	sqsQueueURL := ctx.String("queue-url")
 	if sqsQueueURL == "" {
-		return errors.New("missing SQS queue URL")
+		return nil, nil, errors.New("missing SQS queue URL")
 	}
 
 	dbPool, err := buildRedisPool(ctx.String("redis-url"))
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	db := &redisRepo{cg: dbPool}
@@ -139,7 +156,7 @@ func runSqs(ctx *cli.Context) error {
 	cntx, cancel := context.WithCancel(context.Background())
 	go runSignalHandler(cancel)
 
-	return (&sqsHandler{
+	return &sqsHandler{
 		queueURL:    sqsQueueURL,
 		concurrency: ctx.Int("concurrency"),
 
@@ -148,7 +165,7 @@ func runSqs(ctx *cli.Context) error {
 		asSvc:  asSvc,
 		snsSvc: snsSvc,
 		sqsSvc: sqsSvc,
-	}).Run(cntx)
+	}, cntx, nil
 }
 
 func buildLog(debug bool) *logrus.Logger {

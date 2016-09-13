@@ -40,8 +40,8 @@ test: deps
 coverage.html: coverage.txt
 	go tool cover -html=$^ -o $@
 
-.PHONY: list-deps
-list-deps:
+.PHONY: listdeps
+listdeps:
 	@go list -f '{{ join .Imports "\n" }}' $(ALL_PACKAGES) | sort | uniq
 
 .PHONY: lint

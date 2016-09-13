@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
@@ -58,6 +59,15 @@ func (tr *testRepo) fetchInstanceState(instanceID string) (string, error) {
 	return "", fmt.Errorf("no state for instance '%s'", instanceID)
 }
 
+func (tr *testRepo) wipeInstanceState(instanceID string) error {
+	if _, ok := tr.s[instanceID]; ok {
+		delete(tr.s, instanceID)
+		return nil
+	}
+
+	return fmt.Errorf("no state for instance '%s'", instanceID)
+}
+
 func (tr *testRepo) storeInstanceLifecycleAction(la *lifecycleAction) error {
 	if la.LifecycleTransition == "" || la.EC2InstanceID == "" ||
 		la.LifecycleActionToken == "" || la.AutoScalingGroupName == "" ||
@@ -86,7 +96,7 @@ func (tr *testRepo) wipeInstanceLifecycleAction(transition, instanceID string) e
 }
 
 func newTestSNSService(f func(*request.Request)) snsiface.SNSAPI {
-	svc := sns.New(session.New(), nil)
+	svc := sns.New(session.New(), aws.NewConfig().WithRegion("nz-isengard-1"))
 	svc.Handlers.Clear()
 	if f == nil {
 		f = func(r *request.Request) {
@@ -98,7 +108,7 @@ func newTestSNSService(f func(*request.Request)) snsiface.SNSAPI {
 }
 
 func newTestAutosScalingService(f func(*request.Request)) autoscalingiface.AutoScalingAPI {
-	svc := autoscaling.New(session.New(), nil)
+	svc := autoscaling.New(session.New(), aws.NewConfig().WithRegion("nz-isengard-1"))
 	svc.Handlers.Clear()
 	if f == nil {
 		f = func(r *request.Request) {

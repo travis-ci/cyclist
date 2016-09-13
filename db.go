@@ -21,6 +21,7 @@ type redisConnGetter interface {
 type repo interface {
 	setInstanceState(instanceID, state string) error
 	fetchInstanceState(instanceID string) (string, error)
+	wipeInstanceState(instanceID string) error
 	storeInstanceLifecycleAction(la *lifecycleAction) error
 	fetchInstanceLifecycleAction(transition, instanceID string) (*lifecycleAction, error)
 	wipeInstanceLifecycleAction(transition, instanceID string) error
@@ -47,6 +48,16 @@ func (rr *redisRepo) fetchInstanceState(instanceID string) (string, error) {
 
 	return redis.String(rr.cg.Get().Do("GET",
 		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID)))
+}
+
+func (rr *redisRepo) wipeInstanceState(instanceID string) error {
+	if strings.TrimSpace(instanceID) == "" {
+		return errEmptyInstanceID
+	}
+
+	_, err := rr.cg.Get().Do("DEL",
+		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID))
+	return err
 }
 
 func (rr *redisRepo) storeInstanceLifecycleAction(a *lifecycleAction) error {
