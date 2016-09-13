@@ -48,7 +48,8 @@ func TestServer_POST_sns_Confirmation(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, 200, res.StatusCode)
-	assert.Contains(t, body, "ok")
+	assert.Contains(t, body, "message")
+	assert.Equal(t, "subscription confirmed", body["message"])
 }
 
 func TestServer_POST_sns_Notification_UnknownLifecycleTransition(t *testing.T) {
@@ -113,7 +114,8 @@ func TestServer_POST_sns_Notification_TestEvent(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, 202, res.StatusCode)
-	assert.Contains(t, body, "ok")
+	assert.Contains(t, body, "message")
+	assert.Equal(t, "notification handled", body["message"])
 }
 
 func TestServer_POST_sns_Notification_InstanceLaunchingLifecycleTransition(t *testing.T) {

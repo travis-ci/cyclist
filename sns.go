@@ -17,33 +17,37 @@ func newSnsHandlerFunc(db repo, log *logrus.Logger, snsSvc snsiface.SNSAPI) http
 		msg := &snsMessage{}
 		err := json.NewDecoder(r.Body).Decode(msg)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, `{"error":"invalid json received: %s"}`, err)
+			jsonRespond(w, http.StatusBadRequest, &jsonErr{
+				Err: errors.Wrap(err, "invalid json received"),
+			})
 			return
 		}
 
 		switch msg.Type {
 		case "SubscriptionConfirmation":
 			status, err := handleSNSConfirmation(snsSvc, msg)
-			body := `{"ok": true}`
 			if err != nil {
-				body = fmt.Sprintf(`{"error":%q}`, err.Error())
+				jsonRespond(w, status, &jsonErr{Err: err})
+				return
 			}
-			w.WriteHeader(status)
-			fmt.Fprintf(w, body)
+			jsonRespond(w, status, &jsonMsg{
+				Message: "subscription confirmed",
+			})
 			return
 		case "Notification":
 			status, err := handleSNSNotification(db, log, msg)
-			body := `{"ok": true}`
 			if err != nil {
-				body = fmt.Sprintf(`{"error":%q}`, err.Error())
+				jsonRespond(w, status, &jsonErr{Err: err})
+				return
 			}
-			w.WriteHeader(status)
-			fmt.Fprintf(w, body)
+			jsonRespond(w, status, &jsonMsg{
+				Message: "notification handled",
+			})
 			return
 		default:
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, `{"error":"unknown message type '%s'"}`, msg.Type)
+			jsonRespond(w, http.StatusBadRequest, map[string]interface{}{
+				"error": fmt.Sprintf("unknown message type '%s'", msg.Type),
+			})
 			return
 		}
 	}

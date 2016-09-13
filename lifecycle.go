@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 )
 
 func handleLifecycleTransition(db repo, log *logrus.Logger, asSvc autoscalingiface.AutoScalingAPI, transition, instanceID string) error {
@@ -44,35 +45,34 @@ func handleLifecycleTransition(db repo, log *logrus.Logger, asSvc autoscalingifa
 
 func newInstanceLaunchHandlerFunc(db repo, log *logrus.Logger, asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
 		err := handleLifecycleTransition(
 			db, log, asSvc, "launching", mux.Vars(r)["instance_id"])
-
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, `{"error":"handling lifecycle transition failed: %s"}`, err)
+			jsonRespond(w, http.StatusBadRequest, &jsonErr{
+				Err: errors.Wrap(err, "handling lifecycle transition failed"),
+			})
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"message":"instance launch complete"}`)
+		jsonRespond(w, http.StatusOK, &jsonMsg{
+			Message: "instance launch complete",
+		})
 	}
 }
 
 func newInstanceTerminationHandlerFunc(db repo, log *logrus.Logger, asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
 		err := handleLifecycleTransition(
 			db, log, asSvc, "terminating", mux.Vars(r)["instance_id"])
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, `{"error":"handling lifecycle transition failed: %s"}`, err)
+			jsonRespond(w, http.StatusBadRequest, &jsonErr{
+				Err: errors.Wrap(err, "handling lifecycle transition failed"),
+			})
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"message":"instance termination complete"}`)
+		jsonRespond(w, http.StatusOK, &jsonMsg{
+			Message: "instance termination complete",
+		})
 	}
 }

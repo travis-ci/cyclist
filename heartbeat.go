@@ -1,7 +1,6 @@
 package cyclist
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
@@ -16,11 +15,14 @@ func newInstanceHeartbeatHandlerFunc(db repo, log *logrus.Logger) http.HandlerFu
 		log.WithField("instance_id", instanceID).Debug("fetching state")
 		state, err := db.fetchInstanceState(instanceID)
 		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(w, `{"error": %q}`, err.Error())
+			jsonRespond(w, http.StatusNotFound, &jsonErr{Err: err})
+			return
 		}
 
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"state":%q}`, state)
+		jsonRespond(w, http.StatusOK, &jsonInstanceState{State: state})
 	}
+}
+
+type jsonInstanceState struct {
+	State string `json:"state"`
 }

@@ -25,8 +25,6 @@ type lifecycleAction struct {
 	LifecycleActionToken string `redis:"lifecycle_action_token"`
 	EC2InstanceID        string `json:"EC2InstanceId"`
 	LifecycleHookName    string `redis:"lifecycle_hook_name"`
-
-	unassignable bool
 }
 
 func (la *lifecycleAction) Transition() string {

@@ -1,6 +1,7 @@
 package cyclist
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -23,8 +24,7 @@ type server struct {
 }
 
 func (srv *server) ohai(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "text-plain;charset=utf-8")
-	fmt.Fprintf(w, "ohai™\n")
+	jsonRespond(w, http.StatusOK, &jsonMsg{Message: "ohai™"})
 }
 
 func (srv *server) Serve() error {
@@ -60,4 +60,29 @@ func (srv *server) setupRouter() {
 		newInstanceTerminationHandlerFunc(srv.db, srv.log, srv.asSvc)).Methods("POST")
 
 	srv.router.HandleFunc(`/`, srv.ohai).Methods("GET", "HEAD")
+}
+
+func jsonRespond(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	jsonBytes, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		logrus.WithField("err", err).Error("failed to marshal data to json")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"error":"something awful happened, but it's a secret™"}`)
+		return
+	}
+	w.WriteHeader(status)
+	fmt.Fprintf(w, string(jsonBytes))
+}
+
+type jsonErr struct {
+	Err error
+}
+
+func (je *jsonErr) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`{"error":%q}`, je.Err.Error())), nil
+}
+
+type jsonMsg struct {
+	Message string `json:"message"`
 }
