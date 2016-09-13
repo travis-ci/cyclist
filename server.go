@@ -54,10 +54,10 @@ func (srv *server) setupRouter() {
 		newInstanceHeartbeatHandlerFunc(srv.db, srv.log)).Methods("GET")
 
 	srv.router.HandleFunc(`/launches/{instance_id}`,
-		newInstanceLaunchHandlerFunc(srv.db, srv.log, srv.asSvc)).Methods("POST")
+		newInstanceLifecycleHandlerFunc("launch", srv.db, srv.log, srv.asSvc)).Methods("POST")
 
 	srv.router.HandleFunc(`/terminations/{instance_id}`,
-		newInstanceTerminationHandlerFunc(srv.db, srv.log, srv.asSvc)).Methods("POST")
+		newInstanceLifecycleHandlerFunc("termination", srv.db, srv.log, srv.asSvc)).Methods("POST")
 
 	srv.router.HandleFunc(`/`, srv.ohai).Methods("GET", "HEAD")
 }

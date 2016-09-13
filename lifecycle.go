@@ -40,13 +40,31 @@ func handleLifecycleTransition(db repo, log *logrus.Logger, asSvc autoscalingifa
 		log.WithField("err", err).Warn("failed to clean up lifecycle action bits")
 	}
 
+	switch transition {
+	case "launching":
+		err = db.setInstanceState(instanceID, "up")
+		if err != nil {
+			return err
+		}
+	case "terminating":
+		err = db.wipeInstanceState(instanceID)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-func newInstanceLaunchHandlerFunc(db repo, log *logrus.Logger, asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
+func newInstanceLifecycleHandlerFunc(transition string, db repo, log *logrus.Logger, asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
+	gerund := (map[string]string{
+		"launch":      "launching",
+		"termination": "terminating",
+	})[transition]
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := handleLifecycleTransition(
-			db, log, asSvc, "launching", mux.Vars(r)["instance_id"])
+			db, log, asSvc, gerund, mux.Vars(r)["instance_id"])
 		if err != nil {
 			jsonRespond(w, http.StatusBadRequest, &jsonErr{
 				Err: errors.Wrap(err, "handling lifecycle transition failed"),
@@ -55,24 +73,7 @@ func newInstanceLaunchHandlerFunc(db repo, log *logrus.Logger, asSvc autoscaling
 		}
 
 		jsonRespond(w, http.StatusOK, &jsonMsg{
-			Message: "instance launch complete",
-		})
-	}
-}
-
-func newInstanceTerminationHandlerFunc(db repo, log *logrus.Logger, asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		err := handleLifecycleTransition(
-			db, log, asSvc, "terminating", mux.Vars(r)["instance_id"])
-		if err != nil {
-			jsonRespond(w, http.StatusBadRequest, &jsonErr{
-				Err: errors.Wrap(err, "handling lifecycle transition failed"),
-			})
-			return
-		}
-
-		jsonRespond(w, http.StatusOK, &jsonMsg{
-			Message: "instance termination complete",
+			Message: fmt.Sprintf("instance %s complete", transition),
 		})
 	}
 }

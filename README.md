@@ -1,5 +1,8 @@
 # cyclist 🚴
 
+[![Build Status](https://travis-ci.org/travis-ci/cyclist.svg?branch=master)](https://travis-ci.org/travis-ci/cyclist)
+[![codecov](https://codecov.io/gh/travis-ci/cyclist/branch/master/graph/badge.svg)](https://codecov.io/gh/travis-ci/cyclist)
+
 µService™ for managing AWS auto-scaling groups and their lifecycle events.
 
 By default, ASGs will forcefully shut your instance down when scaling in. In
