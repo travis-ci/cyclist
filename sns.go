@@ -17,6 +17,7 @@ func newSnsHandlerFunc(db repo, log *logrus.Logger, snsSvc snsiface.SNSAPI) http
 		msg := &snsMessage{}
 		err := json.NewDecoder(r.Body).Decode(msg)
 		if err != nil {
+			log.WithField("err", err).Error("invalid json received")
 			jsonRespond(w, http.StatusBadRequest, &jsonErr{
 				Err: errors.Wrap(err, "invalid json received"),
 			})
@@ -27,6 +28,7 @@ func newSnsHandlerFunc(db repo, log *logrus.Logger, snsSvc snsiface.SNSAPI) http
 		case "SubscriptionConfirmation":
 			status, err := handleSNSConfirmation(snsSvc, msg)
 			if err != nil {
+				log.WithField("err", err).Error("failed to handle sns confirmation")
 				jsonRespond(w, status, &jsonErr{Err: err})
 				return
 			}
@@ -37,6 +39,7 @@ func newSnsHandlerFunc(db repo, log *logrus.Logger, snsSvc snsiface.SNSAPI) http
 		case "Notification":
 			status, err := handleSNSNotification(db, log, msg)
 			if err != nil {
+				log.WithField("err", err).Error("failed to handle sns notification")
 				jsonRespond(w, status, &jsonErr{Err: err})
 				return
 			}
@@ -45,6 +48,7 @@ func newSnsHandlerFunc(db repo, log *logrus.Logger, snsSvc snsiface.SNSAPI) http
 			})
 			return
 		default:
+			log.WithField("type", msg.Type).Warn("unknown sns message type")
 			jsonRespond(w, http.StatusBadRequest, map[string]interface{}{
 				"error": fmt.Sprintf("unknown message type '%s'", msg.Type),
 			})
@@ -76,7 +80,7 @@ func handleSNSNotification(db repo, log *logrus.Logger, msg *snsMessage) (int, e
 	}
 
 	if action.Event == "autoscaling:TEST_NOTIFICATION" {
-		log.WithField("event", action.Event).Info("ignoring")
+		log.WithField("event", action.Event).Debug("ignoring")
 		return http.StatusAccepted, nil
 	}
 
@@ -101,6 +105,7 @@ func handleSNSNotification(db repo, log *logrus.Logger, msg *snsMessage) (int, e
 		}
 		return http.StatusOK, nil
 	default:
+		log.WithField("transition", action.LifecycleTransition).Warn("unknown lifecycle transition")
 		return http.StatusBadRequest, fmt.Errorf("unknown lifecycle transition %q", action.LifecycleTransition)
 	}
 }
