@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -91,10 +92,22 @@ func (f *fullLifecycleManagementHTTP) Run(ctx *cli.Context) error {
 	return nil
 }
 
+func (f *fullLifecycleManagementHTTP) authPost(path string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", f.ts.URL, path), body)
+	assert.Nil(f.t, err)
+	assert.NotNil(f.t, req)
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", f.srv.authTokens[0]))
+
+	client := &http.Client{}
+	return client.Do(req)
+}
+
 func (f *fullLifecycleManagementHTTP) stepInitServer(ctx *cli.Context) {
 	srv, err := runServeSetup(ctx)
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, srv)
+
+	srv.authTokens = []string{fmt.Sprintf("%d", rand.Int())}
 
 	srv.db = newTestRepo()
 	assert.NotNil(f.t, srv.db)
@@ -207,8 +220,7 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingNotification() {
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
-	res, err := http.Post(fmt.Sprintf("%s/launches/%s", f.ts.URL, f.vars["instance_id"]),
-		"application/octet-stream", &bytes.Buffer{})
+	res, err := f.authPost(fmt.Sprintf("/launches/%s", f.vars["instance_id"]), &bytes.Buffer{})
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
 
@@ -295,8 +307,7 @@ func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileDown() {
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
-	res, err := http.Post(fmt.Sprintf("%s/terminations/%s", f.ts.URL, f.vars["instance_id"]),
-		"application/octet-stream", &bytes.Buffer{})
+	res, err := f.authPost(fmt.Sprintf("/terminations/%s", f.vars["instance_id"]), &bytes.Buffer{})
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
 
