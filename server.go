@@ -2,6 +2,7 @@ package cyclist
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -13,8 +14,14 @@ import (
 	"github.com/urfave/negroni"
 )
 
+var (
+	errUnauthorized = errors.New("unauthorized")
+	errForbidden    = errors.New("forbidden")
+)
+
 type server struct {
-	port string
+	port       string
+	authTokens []string
 
 	db     repo
 	log    *logrus.Logger
@@ -28,6 +35,10 @@ func (srv *server) ohai(w http.ResponseWriter, req *http.Request) {
 }
 
 func (srv *server) Serve() error {
+	if srv.authTokens == nil {
+		srv.authTokens = []string{}
+	}
+
 	if srv.router == nil {
 		srv.setupRouter()
 	}
@@ -53,13 +64,35 @@ func (srv *server) setupRouter() {
 	srv.router.HandleFunc(`/heartbeats/{instance_id}`,
 		newInstanceHeartbeatHandlerFunc(srv.db, srv.log)).Methods("GET")
 
-	srv.router.HandleFunc(`/launches/{instance_id}`,
-		newInstanceLifecycleHandlerFunc("launch", srv.db, srv.log, srv.asSvc)).Methods("POST")
+	srv.router.Handle(`/launches/{instance_id}`,
+		srv.authd(newInstanceLifecycleHandlerFunc("launch", srv.db, srv.log, srv.asSvc))).Methods("POST")
 
-	srv.router.HandleFunc(`/terminations/{instance_id}`,
-		newInstanceLifecycleHandlerFunc("termination", srv.db, srv.log, srv.asSvc)).Methods("POST")
+	srv.router.Handle(`/terminations/{instance_id}`,
+		srv.authd(newInstanceLifecycleHandlerFunc("termination", srv.db, srv.log, srv.asSvc))).Methods("POST")
 
 	srv.router.HandleFunc(`/`, srv.ohai).Methods("GET", "HEAD")
+}
+
+func (srv *server) authd(f http.HandlerFunc) http.Handler {
+	return negroni.New(negroni.HandlerFunc(srv.requireAuth), negroni.Wrap(http.HandlerFunc(f)))
+}
+
+func (srv *server) requireAuth(w http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
+	authHeader := req.Header.Get("Authorization")
+	if authHeader == "" {
+		w.Header().Set("WWW-Authenticate", "token")
+		jsonRespond(w, http.StatusUnauthorized, &jsonErr{Err: errUnauthorized})
+		return
+	}
+
+	for _, tok := range srv.authTokens {
+		if authHeader == fmt.Sprintf("token %s", tok) {
+			next(w, req)
+			return
+		}
+	}
+
+	jsonRespond(w, http.StatusForbidden, &jsonErr{Err: errForbidden})
 }
 
 func jsonRespond(w http.ResponseWriter, status int, data interface{}) {

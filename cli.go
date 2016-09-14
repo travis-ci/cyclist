@@ -59,6 +59,12 @@ func NewCLI() *cli.App {
 						Aliases: []string{"p"},
 						EnvVars: []string{"CYCLIST_PORT", "PORT"},
 					},
+					&cli.StringFlag{
+						Name:    "auth-tokens",
+						Usage:   "comma-delimited strings used for token auth of mutative requests",
+						Aliases: []string{"T"},
+						EnvVars: []string{"CYCLIST_AUTH_TOKENS", "AUTH_TOKENS"},
+					},
 				},
 				Action: runServe,
 			},
@@ -113,8 +119,14 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 		Region: aws.String(ctx.String("aws-region")),
 	})
 
+	authTokens := strings.Split(ctx.String("auth-tokens"), ",")
+	for i, tok := range authTokens {
+		authTokens[i] = strings.TrimSpace(tok)
+	}
+
 	return &server{
-		port: port,
+		port:       port,
+		authTokens: authTokens,
 
 		db:     db,
 		log:    log,
