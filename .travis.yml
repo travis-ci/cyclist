@@ -24,11 +24,6 @@ addons:
     - travis-ci/cyclist/$TRAVIS_COMMIT_SHORT
     - travis-ci/cyclist/$TRAVIS_COMMIT_LESSSHORT
 
-install:
-- go get github.com/FiloSottile/gvt
-- go get github.com/alecthomas/gometalinter
-- gometalinter --install
-
 script:
 - make
 - build/linux/amd64/cyclist --help

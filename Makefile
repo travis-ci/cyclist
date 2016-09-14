@@ -69,7 +69,7 @@ crossbuild: deps
 
 .PHONY: clean
 clean:
-	find $(GOPATH)/pkg -wholename '*$(PACKAGE)*.a' -delete
+	if [ -d $(GOPATH)/pkg ]; then find $(GOPATH)/pkg -wholename '*$(PACKAGE)*.a' -delete ; fi
 	$(RM) $(GOPATH)/bin/cyclist
 	$(RM) -rv ./build coverage.html coverage.txt
 
