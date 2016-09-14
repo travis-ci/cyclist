@@ -91,6 +91,11 @@ func handleSNSNotification(db repo, log *logrus.Logger, msg *snsMessage) (int, e
 		if err != nil {
 			return http.StatusBadRequest, err
 		}
+		log.WithField("action", action).Debug("setting expected_state to up")
+		err = db.setInstanceState(action.EC2InstanceID, "up")
+		if err != nil {
+			return http.StatusBadRequest, err
+		}
 		return http.StatusOK, nil
 	case "autoscaling:EC2_INSTANCE_TERMINATING":
 		log.WithField("action", action).Debug("setting expected_state to down")

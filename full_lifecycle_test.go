@@ -217,6 +217,10 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingNotification() {
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, la)
 	assert.Equal(f.t, "pending", f.vars["instance_launching_state"])
+
+	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
+	assert.Nil(f.t, err)
+	assert.Equal(f.t, "up", state)
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
