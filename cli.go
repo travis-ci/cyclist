@@ -54,7 +54,7 @@ func NewCLI() *cli.App {
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:    "port",
-						Value:   "*:9753",
+						Value:   ":9753",
 						Usage:   "the `PORT` (or full address) on which to serve",
 						Aliases: []string{"p"},
 						EnvVars: []string{"CYCLIST_PORT", "PORT"},
@@ -96,7 +96,7 @@ func runServe(ctx *cli.Context) error {
 func runServeSetup(ctx *cli.Context) (*server, error) {
 	port := ctx.String("port")
 	if !strings.Contains(port, ":") {
-		port = fmt.Sprintf("*:%s", port)
+		port = fmt.Sprintf(":%s", port)
 	}
 
 	dbPool, err := buildRedisPool(ctx.String("redis-url"))
