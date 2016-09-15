@@ -178,8 +178,8 @@ func (rr *redisRepo) closeConn(conn redis.Conn) {
 	}
 }
 
-func buildRedisPool(redisURL string) (redisConnGetter, error) {
-	pool := &redis.Pool{
+func buildRedisPool(redisURL string) redisConnGetter {
+	return &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: time.Minute,
 		Dial: func() (redis.Conn, error) {
@@ -193,5 +193,4 @@ func buildRedisPool(redisURL string) (redisConnGetter, error) {
 			return err
 		},
 	}
-	return pool, nil
 }
