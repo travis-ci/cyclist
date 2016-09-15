@@ -172,7 +172,7 @@ func (rr *redisRepo) wipeInstanceLifecycleAction(transition, instanceID string) 
 func buildRedisPool(redisURL string) (redisConnGetter, error) {
 	pool := &redis.Pool{
 		MaxIdle:     3,
-		IdleTimeout: 60 * time.Second,
+		IdleTimeout: time.Minute,
 		Dial: func() (redis.Conn, error) {
 			return redis.DialURL(redisURL)
 		},
