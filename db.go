@@ -37,7 +37,9 @@ func (rr *redisRepo) setInstanceState(instanceID, state string) error {
 	}
 
 	instanceStateKey := fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID)
-	_, err := rr.cg.Get().Do("SET", instanceStateKey, state)
+	conn := rr.cg.Get()
+	defer func() { _ := conn.Close() }()
+	_, err := conn.Do("SET", instanceStateKey, state)
 	return err
 }
 
@@ -46,7 +48,9 @@ func (rr *redisRepo) fetchInstanceState(instanceID string) (string, error) {
 		return "", errEmptyInstanceID
 	}
 
-	return redis.String(rr.cg.Get().Do("GET",
+	conn := rr.cg.Get()
+	defer func() { _ := conn.Close() }()
+	return redis.String(conn.Do("GET",
 		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID)))
 }
 
@@ -55,7 +59,9 @@ func (rr *redisRepo) wipeInstanceState(instanceID string) error {
 		return errEmptyInstanceID
 	}
 
-	_, err := rr.cg.Get().Do("DEL",
+	conn := rr.cg.Get()
+	defer func() { _ := conn.Close() }()
+	_, err := conn.Do("DEL",
 		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID))
 	return err
 }
@@ -172,7 +178,7 @@ func buildRedisPool(redisURL string) (redisConnGetter, error) {
 
 	pool := &redis.Pool{
 		MaxIdle:     3,
-		IdleTimeout: 240 * time.Second,
+		IdleTimeout: 60 * time.Second,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", u.Host)
 			if err != nil {
@@ -190,6 +196,9 @@ func buildRedisPool(redisURL string) (redisConnGetter, error) {
 			return c, err
 		},
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			if time.Since(t) < time.Minute {
+				return nil
+			}
 			_, err := c.Do("PING")
 			return err
 		},
