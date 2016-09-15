@@ -3,7 +3,6 @@ package cyclist
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -38,7 +37,7 @@ func (rr *redisRepo) setInstanceState(instanceID, state string) error {
 
 	instanceStateKey := fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID)
 	conn := rr.cg.Get()
-	defer func() { _ := conn.Close() }()
+	defer func() { _ = conn.Close() }()
 	_, err := conn.Do("SET", instanceStateKey, state)
 	return err
 }
@@ -49,7 +48,7 @@ func (rr *redisRepo) fetchInstanceState(instanceID string) (string, error) {
 	}
 
 	conn := rr.cg.Get()
-	defer func() { _ := conn.Close() }()
+	defer func() { _ = conn.Close() }()
 	return redis.String(conn.Do("GET",
 		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID)))
 }
@@ -60,7 +59,7 @@ func (rr *redisRepo) wipeInstanceState(instanceID string) error {
 	}
 
 	conn := rr.cg.Get()
-	defer func() { _ := conn.Close() }()
+	defer func() { _ = conn.Close() }()
 	_, err := conn.Do("DEL",
 		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID))
 	return err
@@ -171,29 +170,11 @@ func (rr *redisRepo) wipeInstanceLifecycleAction(transition, instanceID string) 
 }
 
 func buildRedisPool(redisURL string) (redisConnGetter, error) {
-	u, err := url.Parse(redisURL)
-	if err != nil {
-		return nil, err
-	}
-
 	pool := &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 60 * time.Second,
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", u.Host)
-			if err != nil {
-				return nil, err
-			}
-			if u.User == nil {
-				return c, err
-			}
-			if auth, ok := u.User.Password(); ok {
-				if _, err := c.Do("AUTH", auth); err != nil {
-					c.Close()
-					return nil, err
-				}
-			}
-			return c, err
+			return redis.DialURL(redisURL)
 		},
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {
 			if time.Since(t) < time.Minute {
