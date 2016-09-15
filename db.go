@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -27,7 +28,8 @@ type repo interface {
 }
 
 type redisRepo struct {
-	cg redisConnGetter
+	cg  redisConnGetter
+	log *logrus.Logger
 }
 
 func (rr *redisRepo) setInstanceState(instanceID, state string) error {
@@ -37,7 +39,7 @@ func (rr *redisRepo) setInstanceState(instanceID, state string) error {
 
 	instanceStateKey := fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID)
 	conn := rr.cg.Get()
-	defer func() { _ = conn.Close() }()
+	defer rr.closeConn(conn)
 	_, err := conn.Do("SET", instanceStateKey, state)
 	return err
 }
@@ -48,7 +50,7 @@ func (rr *redisRepo) fetchInstanceState(instanceID string) (string, error) {
 	}
 
 	conn := rr.cg.Get()
-	defer func() { _ = conn.Close() }()
+	defer rr.closeConn(conn)
 	return redis.String(conn.Do("GET",
 		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID)))
 }
@@ -59,7 +61,7 @@ func (rr *redisRepo) wipeInstanceState(instanceID string) error {
 	}
 
 	conn := rr.cg.Get()
-	defer func() { _ = conn.Close() }()
+	defer rr.closeConn(conn)
 	_, err := conn.Do("DEL",
 		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID))
 	return err
@@ -73,7 +75,7 @@ func (rr *redisRepo) storeInstanceLifecycleAction(a *lifecycleAction) error {
 	}
 
 	conn := rr.cg.Get()
-	defer func() { _ = conn.Close() }()
+	defer rr.closeConn(conn)
 
 	err := conn.Send("MULTI")
 	if err != nil {
@@ -113,7 +115,7 @@ func (rr *redisRepo) fetchInstanceLifecycleAction(transition, instanceID string)
 	}
 
 	conn := rr.cg.Get()
-	defer func() { _ = conn.Close() }()
+	defer rr.closeConn(conn)
 
 	exists, err := redis.Bool(conn.Do("SISMEMBER", fmt.Sprintf("%s:instance_%s", RedisNamespace, transition), instanceID))
 	if !exists {
@@ -146,7 +148,7 @@ func (rr *redisRepo) wipeInstanceLifecycleAction(transition, instanceID string) 
 	}
 
 	conn := rr.cg.Get()
-	defer func() { _ = conn.Close() }()
+	defer rr.closeConn(conn)
 
 	err := conn.Send("MULTI")
 	if err != nil {
@@ -167,6 +169,13 @@ func (rr *redisRepo) wipeInstanceLifecycleAction(transition, instanceID string) 
 
 	_, err = conn.Do("EXEC")
 	return err
+}
+
+func (rr *redisRepo) closeConn(conn redis.Conn) {
+	err := conn.Close()
+	if err != nil {
+		rr.log.WithField("err", err).Error("failed to close redis conn")
+	}
 }
 
 func buildRedisPool(redisURL string) (redisConnGetter, error) {
