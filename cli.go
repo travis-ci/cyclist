@@ -106,8 +106,10 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 	}
 
 	log := buildLog(ctx.Bool("debug"))
-	dbPool := buildRedisPool(ctx.String("redis-url"))
-	db := &redisRepo{cg: dbPool, log: log}
+	db := &redisRepo{
+		cg:  buildRedisPool(ctx.String("redis-url")),
+		log: log,
+	}
 
 	snsSvc := sns.New(session.New(), &aws.Config{
 		Region: aws.String(ctx.String("aws-region")),
@@ -148,8 +150,10 @@ func runSqsSetup(ctx *cli.Context) (*sqsHandler, context.Context, error) {
 	}
 
 	log := buildLog(ctx.Bool("debug"))
-	dbPool := buildRedisPool(ctx.String("redis-url"))
-	db := &redisRepo{cg: dbPool, log: log}
+	db := &redisRepo{
+		cg:  buildRedisPool(ctx.String("redis-url")),
+		log: log,
+	}
 
 	sqsSvc := sqs.New(session.New())
 	snsSvc := sns.New(session.New(), &aws.Config{
