@@ -3,10 +3,10 @@ package cyclist
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -28,7 +28,8 @@ type repo interface {
 }
 
 type redisRepo struct {
-	cg redisConnGetter
+	cg  redisConnGetter
+	log *logrus.Logger
 }
 
 func (rr *redisRepo) setInstanceState(instanceID, state string) error {
@@ -37,7 +38,9 @@ func (rr *redisRepo) setInstanceState(instanceID, state string) error {
 	}
 
 	instanceStateKey := fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID)
-	_, err := rr.cg.Get().Do("SET", instanceStateKey, state)
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+	_, err := conn.Do("SET", instanceStateKey, state)
 	return err
 }
 
@@ -46,7 +49,9 @@ func (rr *redisRepo) fetchInstanceState(instanceID string) (string, error) {
 		return "", errEmptyInstanceID
 	}
 
-	return redis.String(rr.cg.Get().Do("GET",
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+	return redis.String(conn.Do("GET",
 		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID)))
 }
 
@@ -55,7 +60,9 @@ func (rr *redisRepo) wipeInstanceState(instanceID string) error {
 		return errEmptyInstanceID
 	}
 
-	_, err := rr.cg.Get().Do("DEL",
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+	_, err := conn.Do("DEL",
 		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID))
 	return err
 }
@@ -68,7 +75,7 @@ func (rr *redisRepo) storeInstanceLifecycleAction(a *lifecycleAction) error {
 	}
 
 	conn := rr.cg.Get()
-	defer func() { _ = conn.Close() }()
+	defer rr.closeConn(conn)
 
 	err := conn.Send("MULTI")
 	if err != nil {
@@ -108,7 +115,7 @@ func (rr *redisRepo) fetchInstanceLifecycleAction(transition, instanceID string)
 	}
 
 	conn := rr.cg.Get()
-	defer func() { _ = conn.Close() }()
+	defer rr.closeConn(conn)
 
 	exists, err := redis.Bool(conn.Do("SISMEMBER", fmt.Sprintf("%s:instance_%s", RedisNamespace, transition), instanceID))
 	if !exists {
@@ -141,7 +148,7 @@ func (rr *redisRepo) wipeInstanceLifecycleAction(transition, instanceID string) 
 	}
 
 	conn := rr.cg.Get()
-	defer func() { _ = conn.Close() }()
+	defer rr.closeConn(conn)
 
 	err := conn.Send("MULTI")
 	if err != nil {
@@ -164,35 +171,26 @@ func (rr *redisRepo) wipeInstanceLifecycleAction(transition, instanceID string) 
 	return err
 }
 
-func buildRedisPool(redisURL string) (redisConnGetter, error) {
-	u, err := url.Parse(redisURL)
+func (rr *redisRepo) closeConn(conn redis.Conn) {
+	err := conn.Close()
 	if err != nil {
-		return nil, err
+		rr.log.WithField("err", err).Error("failed to close redis conn")
 	}
+}
 
-	pool := &redis.Pool{
+func buildRedisPool(redisURL string) redisConnGetter {
+	return &redis.Pool{
 		MaxIdle:     3,
-		IdleTimeout: 240 * time.Second,
+		IdleTimeout: time.Minute,
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", u.Host)
-			if err != nil {
-				return nil, err
-			}
-			if u.User == nil {
-				return c, err
-			}
-			if auth, ok := u.User.Password(); ok {
-				if _, err := c.Do("AUTH", auth); err != nil {
-					c.Close()
-					return nil, err
-				}
-			}
-			return c, err
+			return redis.DialURL(redisURL)
 		},
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			if time.Since(t) < time.Minute {
+				return nil
+			}
 			_, err := c.Do("PING")
 			return err
 		},
 	}
-	return pool, nil
 }
