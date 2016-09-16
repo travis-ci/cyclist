@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func newSnsHandlerFunc(db repo, log *logrus.Logger, snsSvc snsiface.SNSAPI) http.HandlerFunc {
+func newSnsHandlerFunc(db repo, log *logrus.Logger, snsSvc snsiface.SNSAPI, snsVerify bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		msg := &snsMessage{}
 		err := json.NewDecoder(r.Body).Decode(msg)
@@ -22,6 +22,16 @@ func newSnsHandlerFunc(db repo, log *logrus.Logger, snsSvc snsiface.SNSAPI) http
 				Err: errors.Wrap(err, "invalid json received"),
 			})
 			return
+		}
+
+		if snsVerify {
+			err = msg.verify()
+			if err != nil {
+				log.WithField("err", err).Error("failed to verify sns message")
+				jsonRespond(w, http.StatusBadRequest, &jsonErr{
+					Err: errors.Wrap(err, "failed to verify sns message"),
+				})
+			}
 		}
 
 		switch msg.Type {

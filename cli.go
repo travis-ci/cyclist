@@ -131,6 +131,8 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 		log:    log,
 		asSvc:  asSvc,
 		snsSvc: snsSvc,
+
+		snsVerify: true,
 	}, nil
 }
 

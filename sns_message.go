@@ -16,7 +16,13 @@ import (
 )
 
 var (
-	snsSigKeys = []string{
+	// NOTE: this declaration is broken up mostly to appease the gofmt checker,
+	//       although I don't know why ~meatballhat
+	snsSigKeys = map[string][]string{}
+)
+
+func init() {
+	snsSigKeys["Notification"] = []string{
 		"Message",
 		"MessageID",
 		"Subject",
@@ -24,7 +30,16 @@ var (
 		"TopicARN",
 		"Type",
 	}
-)
+	snsSigKeys["SubscriptionConfirmation"] = []string{
+		"Message",
+		"MessageID",
+		"SubscribeURL",
+		"Timestamp",
+		"Token",
+		"TopicARN",
+		"Type",
+	}
+}
 
 type snsMessage struct {
 	Message        string
@@ -52,7 +67,7 @@ func (m *snsMessage) verify() error {
 	buf := &bytes.Buffer{}
 	v := reflect.ValueOf(m)
 
-	for _, key := range snsSigKeys {
+	for _, key := range snsSigKeys[m.Type] {
 		val := reflect.Indirect(v).FieldByName(key).String()
 		if val == "" {
 			continue

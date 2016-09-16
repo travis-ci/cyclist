@@ -28,6 +28,8 @@ type server struct {
 	asSvc  autoscalingiface.AutoScalingAPI
 	snsSvc snsiface.SNSAPI
 	router *mux.Router
+
+	snsVerify bool
 }
 
 func (srv *server) ohai(w http.ResponseWriter, req *http.Request) {
@@ -59,7 +61,7 @@ func (srv *server) Serve() error {
 
 func (srv *server) setupRouter() {
 	srv.router = mux.NewRouter()
-	srv.router.HandleFunc(`/sns`, newSnsHandlerFunc(srv.db, srv.log, srv.snsSvc)).Methods("POST")
+	srv.router.HandleFunc(`/sns`, newSnsHandlerFunc(srv.db, srv.log, srv.snsSvc, srv.snsVerify)).Methods("POST")
 
 	srv.router.HandleFunc(`/heartbeats/{instance_id}`,
 		newInstanceHeartbeatHandlerFunc(srv.db, srv.log)).Methods("GET")

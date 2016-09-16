@@ -112,6 +112,7 @@ func (f *fullLifecycleManagementHTTP) stepInitServer(ctx *cli.Context) {
 	srv.db = newTestRepo()
 	assert.NotNil(f.t, srv.db)
 
+	srv.snsVerify = false
 	srv.asSvc = newTestAutosScalingService(f.autoScalingCallback)
 	srv.snsSvc = newTestSNSService(f.snsCallback)
 	if os.Getenv("DEBUG") != "1" {
