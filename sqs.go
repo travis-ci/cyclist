@@ -21,7 +21,7 @@ type sqsHandler struct {
 	concurrency int
 
 	db     repo
-	log    *logrus.Logger
+	log    logrus.FieldLogger
 	asSvc  autoscalingiface.AutoScalingAPI
 	snsSvc snsiface.SNSAPI
 	sqsSvc sqsiface.SQSAPI

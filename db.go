@@ -29,7 +29,7 @@ type repo interface {
 
 type redisRepo struct {
 	cg  redisConnGetter
-	log *logrus.Logger
+	log logrus.FieldLogger
 }
 
 func (rr *redisRepo) setInstanceState(instanceID, state string) error {

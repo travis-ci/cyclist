@@ -21,6 +21,8 @@ func newTestServer() *server {
 		log:    shushLog,
 		asSvc:  newTestAutosScalingService(nil),
 		snsSvc: newTestSNSService(nil),
+
+		snsVerify: false,
 	}
 	srv.setupRouter()
 	return srv

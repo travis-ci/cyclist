@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	shushLog = func() *logrus.Logger {
+	shushLog = func() logrus.FieldLogger {
 		l := logrus.New()
 		l.Level = logrus.FatalLevel
 		return l

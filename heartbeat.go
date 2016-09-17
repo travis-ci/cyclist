@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func newInstanceHeartbeatHandlerFunc(db repo, log *logrus.Logger) http.HandlerFunc {
+func newInstanceHeartbeatHandlerFunc(db repo, log logrus.FieldLogger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		instanceID := vars["instance_id"]
