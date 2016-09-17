@@ -12,8 +12,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-func newSnsHandlerFunc(db repo, log *logrus.Logger, snsSvc snsiface.SNSAPI, snsVerify bool) http.HandlerFunc {
+func newSnsHandlerFunc(db repo, log logrus.FieldLogger, snsSvc snsiface.SNSAPI, snsVerify bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log = log.WithFields(logrus.Fields{
+			"path":   r.URL.Path,
+			"method": r.Method,
+		})
 		msg := &snsMessage{}
 		err := json.NewDecoder(r.Body).Decode(msg)
 		if err != nil {
@@ -79,7 +83,7 @@ func handleSNSConfirmation(snsSvc snsiface.SNSAPI, msg *snsMessage) (int, error)
 	return http.StatusOK, nil
 }
 
-func handleSNSNotification(db repo, log *logrus.Logger, msg *snsMessage) (int, error) {
+func handleSNSNotification(db repo, log logrus.FieldLogger, msg *snsMessage) (int, error) {
 	action, err := msg.lifecycleAction()
 	if err != nil {
 		return http.StatusBadRequest, errors.Wrap(err, "invalid json received in sns Message")

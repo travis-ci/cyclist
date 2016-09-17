@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func handleLifecycleTransition(db repo, log *logrus.Logger, asSvc autoscalingiface.AutoScalingAPI, transition, instanceID string) error {
+func handleLifecycleTransition(db repo, log logrus.FieldLogger, asSvc autoscalingiface.AutoScalingAPI, transition, instanceID string) error {
 	action, err := db.fetchInstanceLifecycleAction(transition, instanceID)
 	if err != nil {
 		return err
@@ -56,13 +56,17 @@ func handleLifecycleTransition(db repo, log *logrus.Logger, asSvc autoscalingifa
 	return nil
 }
 
-func newInstanceLifecycleHandlerFunc(transition string, db repo, log *logrus.Logger, asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
+func newInstanceLifecycleHandlerFunc(transition string, db repo, log logrus.FieldLogger, asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
 	gerund := (map[string]string{
 		"launch":      "launching",
 		"termination": "terminating",
 	})[transition]
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		log = log.WithFields(logrus.Fields{
+			"path":   r.URL.Path,
+			"method": r.Method,
+		})
 		err := handleLifecycleTransition(
 			db, log, asSvc, gerund, mux.Vars(r)["instance_id"])
 		if err != nil {

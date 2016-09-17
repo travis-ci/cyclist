@@ -24,7 +24,7 @@ type server struct {
 	authTokens []string
 
 	db     repo
-	log    *logrus.Logger
+	log    logrus.FieldLogger
 	asSvc  autoscalingiface.AutoScalingAPI
 	snsSvc snsiface.SNSAPI
 	router *mux.Router

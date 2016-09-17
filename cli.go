@@ -180,7 +180,7 @@ func runSqsSetup(ctx *cli.Context) (*sqsHandler, context.Context, error) {
 	}, cntx, nil
 }
 
-func buildLog(debug bool) *logrus.Logger {
+func buildLog(debug bool) logrus.FieldLogger {
 	log := logrus.New()
 	if debug {
 		log.Level = logrus.DebugLevel
