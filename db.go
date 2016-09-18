@@ -3,6 +3,7 @@ package cyclist
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 
 var (
 	errEmptyInstanceID = errors.New("empty instance id")
+	errEmptyEvent      = errors.New("empty event")
 )
 
 type redisConnGetter interface {
@@ -22,6 +24,8 @@ type repo interface {
 	setInstanceState(instanceID, state string) error
 	fetchInstanceState(instanceID string) (string, error)
 	wipeInstanceState(instanceID string) error
+	storeInstanceEvent(instanceID, event string) error
+	fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, error)
 	storeInstanceLifecycleAction(la *lifecycleAction) error
 	fetchInstanceLifecycleAction(transition, instanceID string) (*lifecycleAction, error)
 	wipeInstanceLifecycleAction(transition, instanceID string) error
@@ -30,6 +34,8 @@ type repo interface {
 type redisRepo struct {
 	cg  redisConnGetter
 	log logrus.FieldLogger
+
+	instEventTTL uint
 }
 
 func (rr *redisRepo) setInstanceState(instanceID, state string) error {
@@ -65,6 +71,53 @@ func (rr *redisRepo) wipeInstanceState(instanceID string) error {
 	_, err := conn.Do("DEL",
 		fmt.Sprintf("%s:instance:%s:state", RedisNamespace, instanceID))
 	return err
+}
+
+func (rr *redisRepo) storeInstanceEvent(instanceID, event string) error {
+	if strings.TrimSpace(instanceID) == "" {
+		return errEmptyInstanceID
+	}
+
+	if strings.TrimSpace(event) == "" {
+		return errEmptyEvent
+	}
+
+	return rr.hsetex(fmt.Sprintf("%s:instance:%s:events", RedisNamespace, instanceID),
+		event, time.Now().UTC().Format(time.RFC3339Nano), rr.instEventTTL)
+}
+
+func (rr *redisRepo) fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, error) {
+	if strings.TrimSpace(instanceID) == "" {
+		return nil, errEmptyInstanceID
+	}
+
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	raw, err := redis.StringMap(conn.Do("HGETALL", fmt.Sprintf("%s:instance:%s:events", RedisNamespace, instanceID)))
+	if err != nil {
+		return nil, err
+	}
+
+	events := []*lifecycleEvent{}
+
+	revMap := map[string]string{}
+	revMapKeys := []string{}
+
+	for event, ts := range raw {
+		key := fmt.Sprintf("%s::%s", ts, event)
+		revMap[key] = event
+		revMapKeys = append(revMapKeys, key)
+	}
+
+	sort.Strings(revMapKeys)
+
+	for _, key := range revMapKeys {
+		keyParts := strings.SplitN(key, "::", 2)
+		events = append(events, newLifecycleEvent(revMap[key], keyParts[1]))
+	}
+
+	return events, nil
 }
 
 func (rr *redisRepo) storeInstanceLifecycleAction(a *lifecycleAction) error {
@@ -176,6 +229,31 @@ func (rr *redisRepo) closeConn(conn redis.Conn) {
 	if err != nil {
 		rr.log.WithField("err", err).Error("failed to close redis conn")
 	}
+}
+
+func (rr *redisRepo) hsetex(hashKey, key, value string, ttl uint) error {
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	err := conn.Send("MULTI")
+	if err != nil {
+		return err
+	}
+
+	err = conn.Send("HSET", hashKey, key, value)
+	if err != nil {
+		conn.Do("DISCARD")
+		return err
+	}
+
+	err = conn.Send("EXPIRE", hashKey, fmt.Sprintf("%d", ttl))
+	if err != nil {
+		conn.Do("DISCARD")
+		return err
+	}
+
+	_, err = conn.Do("EXEC")
+	return err
 }
 
 func buildRedisPool(redisURL string) redisConnGetter {

@@ -12,14 +12,41 @@ import (
 	"github.com/pkg/errors"
 )
 
-func handleLifecycleTransition(db repo, log logrus.FieldLogger, asSvc autoscalingiface.AutoScalingAPI, transition, instanceID string) error {
+var (
+	transitionHandlers = map[string]func(repo, string) error{
+		"launching":   handleLaunchingLifecycleTransition,
+		"terminating": handleTerminatingLifecycleTransition,
+	}
+)
+
+func handleLaunchingLifecycleTransition(db repo, instanceID string) error {
+	err := db.setInstanceState(instanceID, "up")
+	if err != nil {
+		return err
+	}
+
+	return db.storeInstanceEvent(instanceID, "launching")
+}
+
+func handleTerminatingLifecycleTransition(db repo, instanceID string) error {
+	err := db.wipeInstanceState(instanceID)
+	if err != nil {
+		return err
+	}
+
+	return db.storeInstanceEvent(instanceID, "terminating")
+}
+
+func handleLifecycleTransition(db repo, log logrus.FieldLogger,
+	asSvc autoscalingiface.AutoScalingAPI, transition, instanceID string) error {
 	action, err := db.fetchInstanceLifecycleAction(transition, instanceID)
 	if err != nil {
 		return err
 	}
 
 	if action == nil {
-		return fmt.Errorf("no lifecycle transition '%s' for instance '%s'", transition, instanceID)
+		return fmt.Errorf("no lifecycle transition '%s' for instance '%s'",
+			transition, instanceID)
 	}
 
 	input := &autoscaling.CompleteLifecycleActionInput{
@@ -31,7 +58,6 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger, asSvc autoscalin
 	}
 	_, err = asSvc.CompleteLifecycleAction(input)
 	if err != nil {
-
 		return err
 	}
 
@@ -40,23 +66,17 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger, asSvc autoscalin
 		log.WithField("err", err).Warn("failed to clean up lifecycle action bits")
 	}
 
-	switch transition {
-	case "launching":
-		err = db.setInstanceState(instanceID, "up")
-		if err != nil {
-			return err
-		}
-	case "terminating":
-		err = db.wipeInstanceState(instanceID)
-		if err != nil {
-			return err
-		}
+	if transitionHandler, ok := transitionHandlers[transition]; ok {
+		return transitionHandler(db, instanceID)
 	}
 
-	return nil
+	return fmt.Errorf("unknown lifecycle transition '%s'", transition)
 }
 
-func newInstanceLifecycleHandlerFunc(transition string, db repo, log logrus.FieldLogger, asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
+func newLifecycleHandlerFunc(transition string, db repo,
+	log logrus.FieldLogger,
+	asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
+
 	gerund := (map[string]string{
 		"launch":      "launching",
 		"termination": "terminating",
@@ -80,4 +100,35 @@ func newInstanceLifecycleHandlerFunc(transition string, db repo, log logrus.Fiel
 			Message: fmt.Sprintf("instance %s complete", transition),
 		})
 	}
+}
+
+func newLifecycleEventsHandlerFunc(db repo, log logrus.FieldLogger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log = log.WithFields(logrus.Fields{
+			"path":   r.URL.Path,
+			"method": r.Method,
+		})
+
+		instanceID := mux.Vars(r)["instance_id"]
+
+		events, err := db.fetchInstanceEvents(instanceID)
+		if err != nil {
+			jsonRespond(w, http.StatusBadRequest, &jsonErr{
+				Err: errors.Wrap(err, "fetching lifecycle events failed"),
+			})
+			return
+		}
+
+		jsonRespond(w, http.StatusOK, &jsonLifecycleEvents{
+			Data: events,
+			Meta: map[string]string{
+				"instance_id": instanceID,
+			},
+		})
+	}
+}
+
+type jsonLifecycleEvents struct {
+	Data []*lifecycleEvent `json:"data"`
+	Meta map[string]string `json:"meta"`
 }

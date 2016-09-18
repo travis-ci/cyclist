@@ -64,13 +64,16 @@ func (srv *server) setupRouter() {
 	srv.router.HandleFunc(`/sns`, newSnsHandlerFunc(srv.db, srv.log, srv.snsSvc, srv.snsVerify)).Methods("POST")
 
 	srv.router.HandleFunc(`/heartbeats/{instance_id}`,
-		newInstanceHeartbeatHandlerFunc(srv.db, srv.log)).Methods("GET")
+		newHeartbeatHandlerFunc(srv.db, srv.log)).Methods("GET")
 
 	srv.router.Handle(`/launches/{instance_id}`,
-		srv.authd(newInstanceLifecycleHandlerFunc("launch", srv.db, srv.log, srv.asSvc))).Methods("POST")
+		srv.authd(newLifecycleHandlerFunc("launch", srv.db, srv.log, srv.asSvc))).Methods("POST")
 
 	srv.router.Handle(`/terminations/{instance_id}`,
-		srv.authd(newInstanceLifecycleHandlerFunc("termination", srv.db, srv.log, srv.asSvc))).Methods("POST")
+		srv.authd(newLifecycleHandlerFunc("termination", srv.db, srv.log, srv.asSvc))).Methods("POST")
+
+	srv.router.Handle(`/events/{instance_id}`,
+		newLifecycleEventsHandlerFunc(srv.db, srv.log)).Methods("GET")
 
 	srv.router.HandleFunc(`/`, srv.ohai).Methods("GET", "HEAD")
 }
