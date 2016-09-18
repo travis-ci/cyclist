@@ -229,7 +229,7 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingNotification() {
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 0)
+	assert.Len(f.t, evs.Data, 1)
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
@@ -257,7 +257,7 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 1)
+	assert.Len(f.t, evs.Data, 2)
 }
 
 func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileUp() {
@@ -280,7 +280,7 @@ func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileUp() {
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 2)
+	assert.Len(f.t, evs.Data, 3)
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingNotification() {
@@ -325,7 +325,7 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingNotification() {
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 2)
+	assert.Len(f.t, evs.Data, 4)
 }
 
 func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileDown() {
@@ -348,7 +348,7 @@ func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileDown() {
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 2)
+	assert.Len(f.t, evs.Data, 4)
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
@@ -379,7 +379,7 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 3)
+	assert.Len(f.t, evs.Data, 5)
 }
 
 func TestFullLifecycleManagementSQS(t *testing.T) {
