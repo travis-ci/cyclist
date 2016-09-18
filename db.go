@@ -114,7 +114,7 @@ func (rr *redisRepo) fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, 
 
 	for _, key := range revMapKeys {
 		keyParts := strings.SplitN(key, "::", 2)
-		events = append(events, newLifecycleEvent(revMap[key], keyParts[1]))
+		events = append(events, newLifecycleEvent(revMap[key], keyParts[0]))
 	}
 
 	return events, nil

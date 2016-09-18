@@ -101,8 +101,8 @@ func TestRedisRepo_fetchInstanceEvents(t *testing.T) {
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("HGETALL", "cyclist:instance:i-fafafaf:events").ExpectMap(map[string]string{
-		"flipping": "2010-09-16T09:18:23.999999999Z04:00",
-		"loafing":  "2010-09-15T11:32:54.999999999Z04:00",
+		"flipping": "2010-09-16T09:18:23.999999999-04:00",
+		"loafing":  "2010-09-15T11:32:54.999999999-04:00",
 	})
 
 	events, err := rr.fetchInstanceEvents("i-fafafaf")
