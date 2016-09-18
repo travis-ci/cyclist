@@ -90,6 +90,7 @@ func newLifecycleHandlerFunc(transition string, db repo,
 		err := handleLifecycleTransition(
 			db, log, asSvc, gerund, mux.Vars(r)["instance_id"])
 		if err != nil {
+			log.WithField("err", err).Error("handling lifecycle transition failed")
 			jsonRespond(w, http.StatusBadRequest, &jsonErr{
 				Err: errors.Wrap(err, "handling lifecycle transition failed"),
 			})
@@ -113,6 +114,7 @@ func newLifecycleEventsHandlerFunc(db repo, log logrus.FieldLogger) http.Handler
 
 		events, err := db.fetchInstanceEvents(instanceID)
 		if err != nil {
+			log.WithField("err", err).Error("fetching lifecycle events failed")
 			jsonRespond(w, http.StatusBadRequest, &jsonErr{
 				Err: errors.Wrap(err, "fetching lifecycle events failed"),
 			})
