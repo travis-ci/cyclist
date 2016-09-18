@@ -12,7 +12,7 @@ type lifecycleEvent struct {
 }
 
 func newLifecycleEvent(event, ts string) *lifecycleEvent {
-	timestamp, err := time.Parse(ts, time.RFC3339Nano)
+	timestamp, err := time.Parse(time.RFC3339Nano, ts)
 	if err != nil {
 		timestamp = standardFluxCapacitorTime
 	}
