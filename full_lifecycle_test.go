@@ -249,6 +249,7 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
 	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "up", state)
+	assert.Equal(f.t, "completed", f.vars["instance_launching_state"])
 
 	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
 	assert.Nil(f.t, err)
