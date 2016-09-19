@@ -2,6 +2,7 @@ package cyclist
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
@@ -36,12 +37,14 @@ func (trcg *testRedisConnGetter) Get() redis.Conn {
 
 type testRepo struct {
 	s  map[string]string
+	e  map[string]map[string]*lifecycleEvent
 	la map[string]*lifecycleAction
 }
 
 func newTestRepo() *testRepo {
 	return &testRepo{
 		s:  map[string]string{},
+		e:  map[string]map[string]*lifecycleEvent{},
 		la: map[string]*lifecycleAction{},
 	}
 }
@@ -66,6 +69,30 @@ func (tr *testRepo) wipeInstanceState(instanceID string) error {
 	}
 
 	return fmt.Errorf("no state for instance '%s'", instanceID)
+}
+
+func (tr *testRepo) storeInstanceEvent(instanceID, event string) error {
+	ts := time.Now().UTC().Format(time.RFC3339Nano)
+	if _, ok := tr.e[instanceID]; !ok {
+		tr.e[instanceID] = map[string]*lifecycleEvent{}
+	}
+	tr.e[instanceID][event] = newLifecycleEvent(event, ts)
+	return nil
+}
+
+func (tr *testRepo) fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, error) {
+	eventsMap, ok := tr.e[instanceID]
+	if !ok {
+		return nil, fmt.Errorf("no events for instance '%s'", instanceID)
+	}
+
+	events := []*lifecycleEvent{}
+
+	for _, event := range eventsMap {
+		events = append(events, event)
+	}
+
+	return events, nil
 }
 
 func (tr *testRepo) storeInstanceLifecycleAction(la *lifecycleAction) error {

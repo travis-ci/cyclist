@@ -40,6 +40,12 @@ func NewCLI() *cli.App {
 				Aliases: []string{"R"},
 				EnvVars: []string{"CYCLIST_REDIS_URL", "REDIS_URL"},
 			},
+			&cli.UintFlag{
+				Name:    "event-ttl",
+				Value:   uint(60 * 60 * 48),
+				Usage:   "duration in seconds since last update that instance lifecycle event data will be kept",
+				EnvVars: []string{"CYCLIST_EVENT_TTL", "EVENT_TTL"},
+			},
 			&cli.BoolFlag{
 				Name:    "debug",
 				Value:   false,
@@ -109,6 +115,8 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 	db := &redisRepo{
 		cg:  buildRedisPool(ctx.String("redis-url")),
 		log: log,
+
+		instEventTTL: ctx.Uint("event-ttl"),
 	}
 
 	snsSvc := sns.New(session.New(), &aws.Config{
@@ -155,6 +163,8 @@ func runSqsSetup(ctx *cli.Context) (*sqsHandler, context.Context, error) {
 	db := &redisRepo{
 		cg:  buildRedisPool(ctx.String("redis-url")),
 		log: log,
+
+		instEventTTL: ctx.Uint("event-ttl"),
 	}
 
 	sqsSvc := sqs.New(session.New())

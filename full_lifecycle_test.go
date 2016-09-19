@@ -222,6 +222,14 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingNotification() {
 	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "up", state)
+
+	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+	assert.Nil(f.t, err)
+
+	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	err = json.NewDecoder(res.Body).Decode(evs)
+	assert.Nil(f.t, err)
+	assert.Len(f.t, evs.Data, 1)
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
@@ -242,6 +250,14 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "up", state)
 	assert.Equal(f.t, "completed", f.vars["instance_launching_state"])
+
+	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+	assert.Nil(f.t, err)
+
+	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	err = json.NewDecoder(res.Body).Decode(evs)
+	assert.Nil(f.t, err)
+	assert.Len(f.t, evs.Data, 2)
 }
 
 func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileUp() {
@@ -257,6 +273,14 @@ func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileUp() {
 	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "up", state)
+
+	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+	assert.Nil(f.t, err)
+
+	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	err = json.NewDecoder(res.Body).Decode(evs)
+	assert.Nil(f.t, err)
+	assert.Len(f.t, evs.Data, 3)
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingNotification() {
@@ -294,6 +318,14 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingNotification() {
 	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "down", state)
+
+	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+	assert.Nil(f.t, err)
+
+	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	err = json.NewDecoder(res.Body).Decode(evs)
+	assert.Nil(f.t, err)
+	assert.Len(f.t, evs.Data, 4)
 }
 
 func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileDown() {
@@ -309,6 +341,14 @@ func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileDown() {
 	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "down", state)
+
+	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+	assert.Nil(f.t, err)
+
+	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	err = json.NewDecoder(res.Body).Decode(evs)
+	assert.Nil(f.t, err)
+	assert.Len(f.t, evs.Data, 4)
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
@@ -332,6 +372,14 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
 
 	assert.Len(f.t, f.db.(*testRepo).s, 0)
 	assert.Len(f.t, f.db.(*testRepo).la, 0)
+
+	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+	assert.Nil(f.t, err)
+
+	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	err = json.NewDecoder(res.Body).Decode(evs)
+	assert.Nil(f.t, err)
+	assert.Len(f.t, evs.Data, 5)
 }
 
 func TestFullLifecycleManagementSQS(t *testing.T) {

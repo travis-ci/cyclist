@@ -110,6 +110,10 @@ func handleSNSNotification(db repo, log logrus.FieldLogger, msg *snsMessage) (in
 		if err != nil {
 			return http.StatusBadRequest, err
 		}
+		err = db.storeInstanceEvent(action.EC2InstanceID, "prelaunching")
+		if err != nil {
+			return http.StatusBadRequest, err
+		}
 		return http.StatusOK, nil
 	case "autoscaling:EC2_INSTANCE_TERMINATING":
 		log.WithField("action", action).Debug("setting expected_state to down")
@@ -119,6 +123,10 @@ func handleSNSNotification(db repo, log logrus.FieldLogger, msg *snsMessage) (in
 		}
 		log.WithField("action", action).Debug("storing instance terminating lifecycle action")
 		err = db.storeInstanceLifecycleAction(action)
+		if err != nil {
+			return http.StatusBadRequest, err
+		}
+		err = db.storeInstanceEvent(action.EC2InstanceID, "preterminating")
 		if err != nil {
 			return http.StatusBadRequest, err
 		}

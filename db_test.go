@@ -67,6 +67,59 @@ func TestRedisRepo_wipeInstanceState_WithEmptyInstanceID(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestRedisRepo_storeInstanceEvent(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}, instEventTTL: uint(30)}
+
+	conn := rr.cg.Get().(*redigomock.Conn)
+	conn.Command("MULTI").Expect("OK!")
+	conn.Command("HSET",
+		"cyclist:instance:i-fafafaf:events",
+		"falafel", redigomock.NewAnyData()).Expect("OK!")
+	conn.Command("EXPIRE", "cyclist:instance:i-fafafaf:events", "30").Expect("OK!")
+	conn.Command("EXEC").Expect("OK!")
+
+	err := rr.storeInstanceEvent("i-fafafaf", "falafel")
+	assert.Nil(t, err)
+}
+
+func TestRedisRepo_storeInstanceEvent_WithEmptyInstanceID(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}}
+
+	err := rr.storeInstanceEvent("", "falafel")
+	assert.NotNil(t, err)
+}
+
+func TestRedisRepo_storeInstanceEvent_WithEmptyEvent(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}}
+
+	err := rr.storeInstanceEvent("i-fafafaf", "")
+	assert.NotNil(t, err)
+}
+
+func TestRedisRepo_fetchInstanceEvents(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}, instEventTTL: uint(30)}
+
+	conn := rr.cg.Get().(*redigomock.Conn)
+	conn.Command("HGETALL", "cyclist:instance:i-fafafaf:events").ExpectMap(map[string]string{
+		"flipping": "2010-09-16T09:18:23.999999999-04:00",
+		"loafing":  "2010-09-15T11:32:54.999999999-04:00",
+	})
+
+	events, err := rr.fetchInstanceEvents("i-fafafaf")
+	assert.Nil(t, err)
+	assert.NotNil(t, events)
+	assert.Len(t, events, 2)
+	assert.Equal(t, "loafing", events[0].Event)
+	assert.Equal(t, "flipping", events[1].Event)
+}
+
+func TestRedisRepo_fetchInstanceEvents_WithEmptyInstanceID(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}}
+
+	_, err := rr.fetchInstanceEvents("")
+	assert.NotNil(t, err)
+}
+
 func TestRedisRepo_storeInstanceLifecycleAction(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
