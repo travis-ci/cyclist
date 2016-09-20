@@ -375,10 +375,10 @@ func TestRedisRepo_storeInstanceToken(t *testing.T) {
 }
 
 func TestRedisRepo_storeTempInstanceToken(t *testing.T) {
-	rr := &redisRepo{cg: &testRedisConnGetter{}, instTokTTL: uint(4)}
+	rr := &redisRepo{cg: &testRedisConnGetter{}, instTokTTL: uint(4), instTempTokTTL: uint(5)}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
-	conn.Command("SETEX", "cyclist:instance:i-fafafaf:tmptoken", uint(4), "much-secret-so-token").Expect("OK!")
+	conn.Command("SETEX", "cyclist:instance:i-fafafaf:tmptoken", uint(5), "much-secret-so-token").Expect("OK!")
 
 	err := rr.storeTempInstanceToken("i-fafafaf", "much-secret-so-token")
 	assert.Nil(t, err)

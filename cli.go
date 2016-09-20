@@ -41,8 +41,14 @@ func NewCLI() *cli.App {
 				EnvVars: []string{"CYCLIST_EVENT_TTL", "EVENT_TTL"},
 			},
 			&cli.UintFlag{
-				Name:    "token-ttl",
+				Name:    "temp-token-ttl",
 				Value:   uint(60 * 5),
+				Usage:   "duration in seconds since last access that instance temporary token will be kept",
+				EnvVars: []string{"CYCLIST_TEMP_TOKEN_TTL", "TEMP_TOKEN_TTL"},
+			},
+			&cli.UintFlag{
+				Name:    "token-ttl",
+				Value:   uint(60 * 60),
 				Usage:   "duration in seconds since last access that instance token will be kept",
 				EnvVars: []string{"CYCLIST_TOKEN_TTL", "TOKEN_TTL"},
 			},
@@ -118,8 +124,9 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 		cg:  buildRedisPool(ctx.String("redis-url")),
 		log: log,
 
-		instEventTTL: ctx.Uint("event-ttl"),
-		instTokTTL:   ctx.Uint("token-ttl"),
+		instEventTTL:   ctx.Uint("event-ttl"),
+		instTempTokTTL: ctx.Uint("temp-token-ttl"),
+		instTokTTL:     ctx.Uint("token-ttl"),
 	}
 
 	snsSvc := sns.New(session.New(), &aws.Config{
@@ -169,8 +176,9 @@ func runSqsSetup(ctx *cli.Context) (*sqsHandler, context.Context, error) {
 		cg:  buildRedisPool(ctx.String("redis-url")),
 		log: log,
 
-		instEventTTL: ctx.Uint("event-ttl"),
-		instTokTTL:   ctx.Uint("token-ttl"),
+		instEventTTL:		ctx.Uint("event-ttl"),
+		instTempTokTTL: ctx.Uint("temp-token-ttl"),
+		instTokTTL:			ctx.Uint("token-ttl"),
 	}
 
 	sqsSvc := sqs.New(session.New())
