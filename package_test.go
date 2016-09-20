@@ -1,7 +1,9 @@
 package cyclist
 
 import (
+	"bytes"
 	"fmt"
+	"testing"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -14,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/sns/snsiface"
 	"github.com/garyburd/redigo/redis"
 	"github.com/rafaeljusto/redigomock"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var (
@@ -23,6 +27,15 @@ var (
 		return l
 	}()
 )
+
+func TestCustomVersionPrinter(t *testing.T) {
+	assert.Equal(t, fmt.Sprintf("%p", cli.VersionPrinter), fmt.Sprintf("%p", customVersionPrinter))
+	buf := &bytes.Buffer{}
+	ctx := cli.NewContext(nil, nil, nil)
+	ctx.App = &cli.App{Name: "hay", Writer: buf}
+	customVersionPrinter(ctx)
+	assert.Regexp(t, "hay v=.* rev=.* d=.*", buf.String())
+}
 
 type testRedisConnGetter struct {
 	Conn *redigomock.Conn

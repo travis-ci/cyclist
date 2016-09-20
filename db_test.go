@@ -363,3 +363,46 @@ func TestRedisRepo_wipeInstanceLifecycleAction_WithFailedExec(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, "def not exectly", err.Error())
 }
+
+func TestRedisRepo_storeInstanceToken(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}, instTokTTL: uint(4)}
+
+	conn := rr.cg.Get().(*redigomock.Conn)
+	conn.Command("SETEX", "cyclist:instance:i-fafafaf:token", uint(4), "much-secret-so-token").Expect("OK!")
+
+	err := rr.storeInstanceToken("i-fafafaf", "much-secret-so-token")
+	assert.Nil(t, err)
+}
+
+func TestRedisRepo_storeTempInstanceToken(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}, instTokTTL: uint(4)}
+
+	conn := rr.cg.Get().(*redigomock.Conn)
+	conn.Command("SETEX", "cyclist:instance:i-fafafaf:tmptoken", uint(4), "much-secret-so-token").Expect("OK!")
+
+	err := rr.storeTempInstanceToken("i-fafafaf", "much-secret-so-token")
+	assert.Nil(t, err)
+}
+
+func TestRedisRepo_fetchInstanceToken(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}, instTokTTL: uint(4)}
+
+	conn := rr.cg.Get().(*redigomock.Conn)
+	conn.Command("GET", "cyclist:instance:i-fafafaf:token").Expect("much-secret-so-token")
+	conn.Command("EXPIRE", "cyclist:instance:i-fafafaf:token", uint(4)).Expect("OK!")
+
+	tok, err := rr.fetchInstanceToken("i-fafafaf")
+	assert.Nil(t, err)
+	assert.Equal(t, "much-secret-so-token", tok)
+}
+
+func TestRedisRepo_fetchTempInstanceToken(t *testing.T) {
+	rr := &redisRepo{cg: &testRedisConnGetter{}, instTokTTL: uint(4)}
+
+	conn := rr.cg.Get().(*redigomock.Conn)
+	conn.Command("GET", "cyclist:instance:i-fafafaf:tmptoken").Expect("much-secret-so-token")
+
+	tok, err := rr.fetchTempInstanceToken("i-fafafaf")
+	assert.Nil(t, err)
+	assert.Equal(t, "much-secret-so-token", tok)
+}
