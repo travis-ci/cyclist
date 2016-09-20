@@ -19,7 +19,7 @@ func (utg *uuidTokenGenerator) GenerateToken() string {
 	return uuid.NewRandom().String()
 }
 
-func newTokensHandler(db repo, log logrus.FieldLogger) http.HandlerFunc {
+func newTokensHandlerFunc(db repo, log logrus.FieldLogger) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		instanceID, ok := mux.Vars(req)["instance_id"]
 		if !ok {
@@ -27,11 +27,17 @@ func newTokensHandler(db repo, log logrus.FieldLogger) http.HandlerFunc {
 			return
 		}
 
-		instTok, err := db.fetchInstanceToken(instanceID)
+		instTok, err := db.fetchTempInstanceToken(instanceID)
 		if err != nil {
 			jsonRespond(w, http.StatusNotFound, &jsonErr{
 				Err: fmt.Errorf("no token for instance '%s'", instanceID),
 			})
+			return
+		}
+
+		err = db.storeInstanceToken(instanceID, instTok)
+		if err != nil {
+			jsonRespond(w, http.StatusInternalServerError, &jsonErr{Err: err})
 			return
 		}
 

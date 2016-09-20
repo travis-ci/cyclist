@@ -100,7 +100,11 @@ func handleSNSNotification(db repo, log logrus.FieldLogger, tokGen tokenGenerato
 
 	switch la.LifecycleTransition {
 	case "autoscaling:EC2_INSTANCE_LAUNCHING":
-		err = handleAutoScalingInstanceLaunching(db, log, tokGen, la)
+		err = handleAutoScalingInstanceLaunching(db, log, la)
+		if err == nil {
+			log.WithField("action", la).Debug("storing temporary instance token")
+			err = db.storeTempInstanceToken(la.EC2InstanceID, tokGen.GenerateToken())
+		}
 	case "autoscaling:EC2_INSTANCE_TERMINATING":
 		err = handleAutoScalingInstanceTerminating(db, log, la)
 	default:
@@ -128,13 +132,9 @@ func handleAutoScalingInstanceTerminating(db repo, log logrus.FieldLogger, la *l
 	return db.storeInstanceEvent(la.EC2InstanceID, "preterminating")
 }
 
-func handleAutoScalingInstanceLaunching(db repo, log logrus.FieldLogger, tokGen tokenGenerator, la *lifecycleAction) error {
+func handleAutoScalingInstanceLaunching(db repo, log logrus.FieldLogger, la *lifecycleAction) error {
 	log.WithField("action", la).Debug("storing instance launching lifecycle action")
-	err := db.storeInstanceToken(la.EC2InstanceID, tokGen.GenerateToken())
-	if err != nil {
-		return err
-	}
-	err = db.storeInstanceLifecycleAction(la)
+	err := db.storeInstanceLifecycleAction(la)
 	if err != nil {
 		return err
 	}

@@ -40,6 +40,7 @@ type testRepo struct {
 	e  map[string]map[string]*lifecycleEvent
 	la map[string]*lifecycleAction
 	t  map[string]string
+	tt map[string]string
 }
 
 func newTestRepo() *testRepo {
@@ -48,6 +49,7 @@ func newTestRepo() *testRepo {
 		e:  map[string]map[string]*lifecycleEvent{},
 		la: map[string]*lifecycleAction{},
 		t:  map[string]string{},
+		tt: map[string]string{},
 	}
 }
 
@@ -134,6 +136,19 @@ func (tr *testRepo) fetchInstanceToken(instanceID string) (string, error) {
 
 func (tr *testRepo) storeInstanceToken(instanceID, token string) error {
 	tr.t[instanceID] = token
+	return nil
+}
+
+func (tr *testRepo) fetchTempInstanceToken(instanceID string) (string, error) {
+	if tok, ok := tr.tt[instanceID]; ok {
+		return tok, nil
+	}
+
+	return "", fmt.Errorf("no token for instance '%s'", instanceID)
+}
+
+func (tr *testRepo) storeTempInstanceToken(instanceID, token string) error {
+	tr.tt[instanceID] = token
 	return nil
 }
 

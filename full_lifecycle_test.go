@@ -228,6 +228,12 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingNotification() {
 }
 
 func (f *fullLifecycleManagementHTTP) stepGetInstanceToken() {
+	_, err := f.db.fetchInstanceToken(f.vars["instance_id"])
+	assert.NotNil(f.t, err)
+
+	_, err = f.db.fetchTempInstanceToken(f.vars["instance_id"])
+	assert.Nil(f.t, err)
+
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/tokens/%s", f.ts.URL, f.vars["instance_id"]), nil)
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, req)

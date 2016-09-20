@@ -34,7 +34,9 @@ type repo interface {
 	wipeInstanceLifecycleAction(transition, instanceID string) error
 
 	storeInstanceToken(instanceID, token string) error
+	storeTempInstanceToken(instanceID, token string) error
 	fetchInstanceToken(instanceID string) (string, error)
+	fetchTempInstanceToken(instanceID string) (string, error)
 }
 
 type redisRepo struct {
@@ -231,27 +233,15 @@ func (rr *redisRepo) wipeInstanceLifecycleAction(transition, instanceID string) 
 	return err
 }
 
-func (rr *redisRepo) fetchInstanceToken(instanceID string) (string, error) {
-	if strings.TrimSpace(instanceID) == "" {
-		return "", errEmptyInstanceID
-	}
-
-	conn := rr.cg.Get()
-	defer rr.closeConn(conn)
-
-	token, err := redis.String(conn.Do("GET",
-		fmt.Sprintf("%s:instance:%s:token", RedisNamespace, instanceID)))
-	if err != nil {
-		return "", err
-	}
-
-	if strings.TrimSpace(token) == "" {
-		return "", errEmptyToken
-	}
-	return token, nil
+func (rr *redisRepo) storeInstanceToken(instanceID, token string) error {
+	return rr.storeInstanceTokenf("%s:instance:%s:token", instanceID, token)
 }
 
-func (rr *redisRepo) storeInstanceToken(instanceID, token string) error {
+func (rr *redisRepo) storeTempInstanceToken(instanceID, token string) error {
+	return rr.storeInstanceTokenf("%s:instance:%s:tmptoken", instanceID, token)
+}
+
+func (rr *redisRepo) storeInstanceTokenf(fmtString, instanceID, token string) error {
 	if strings.TrimSpace(instanceID) == "" {
 		return errEmptyInstanceID
 	}
@@ -264,8 +254,44 @@ func (rr *redisRepo) storeInstanceToken(instanceID, token string) error {
 	defer rr.closeConn(conn)
 
 	_, err := conn.Do("SETEX",
-		fmt.Sprintf("%s:instance:%s:token", RedisNamespace, instanceID), rr.instTokTTL, token)
+		fmt.Sprintf(fmtString, RedisNamespace, instanceID), rr.instTokTTL, token)
 	return err
+}
+
+func (rr *redisRepo) fetchInstanceToken(instanceID string) (string, error) {
+	return rr.fetchInstanceTokenfTTL("%s:instance:%s:token", instanceID, true)
+}
+
+func (rr *redisRepo) fetchTempInstanceToken(instanceID string) (string, error) {
+	return rr.fetchInstanceTokenfTTL("%s:instance:%s:tmptoken", instanceID, false)
+}
+
+func (rr *redisRepo) fetchInstanceTokenfTTL(fmtString, instanceID string, extendTTL bool) (string, error) {
+	if strings.TrimSpace(instanceID) == "" {
+		return "", errEmptyInstanceID
+	}
+
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	key := fmt.Sprintf(fmtString, RedisNamespace, instanceID)
+	token, err := redis.String(conn.Do("GET", key))
+	if err != nil {
+		return "", err
+	}
+
+	if strings.TrimSpace(token) == "" {
+		return "", errEmptyToken
+	}
+
+	if extendTTL {
+		_, err = conn.Do("EXPIRE", key, rr.instTokTTL)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return token, nil
 }
 
 func (rr *redisRepo) closeConn(conn redis.Conn) {

@@ -67,7 +67,7 @@ func (srv *server) setupRouter() {
 		newSNSHandlerFunc(srv.db, srv.log, srv.snsSvc, srv.snsVerify, srv.tokGen)).Methods("POST")
 
 	srv.router.Handle(`/tokens/{instance_id}`,
-		srv.authd(newTokensHandler(srv.db, srv.log))).Methods("GET")
+		srv.authd(newTokensHandlerFunc(srv.db, srv.log))).Methods("GET")
 
 	srv.router.Handle(`/heartbeats/{instance_id}`,
 		srv.instAuthd(newHeartbeatHandlerFunc(srv.db, srv.log))).Methods("GET")
