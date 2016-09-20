@@ -20,18 +20,18 @@ func TestHandleSNSConfirmation(t *testing.T) {
 	})
 
 	msg := &snsMessage{Token: "fafafaf", TopicARN: "faf/af/af"}
-	status, err := handleSNSSubscriptionConfirmation(nil, nil, snsSvc, nil, msg)
+	status, err := handleSNSSubscriptionConfirmation(snsSvc, msg)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Nil(t, err)
 
 	msg = &snsMessage{Token: "fafafaf2", TopicARN: "faf/af/af2"}
-	status, err = handleSNSSubscriptionConfirmation(nil, nil, snsSvc, nil, msg)
+	status, err = handleSNSSubscriptionConfirmation(snsSvc, msg)
 	assert.Equal(t, http.StatusInternalServerError, status)
 	assert.NotNil(t, err)
 }
 
 func TestHandleSNSNotification_EmptyMessage(t *testing.T) {
-	status, err := handleSNSNotification(newTestRepo(), shushLog, nil, nil, &snsMessage{})
+	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), &snsMessage{})
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Regexp(t, "invalid json.+", err.Error())
 }
@@ -40,7 +40,7 @@ func TestHandleSNSNotification_TestNotification(t *testing.T) {
 	msg := &snsMessage{
 		Message: `{"Event": "autoscaling:TEST_NOTIFICATION"}`,
 	}
-	status, err := handleSNSNotification(newTestRepo(), shushLog, nil, nil, msg)
+	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg)
 	assert.Equal(t, http.StatusAccepted, status)
 	assert.Nil(t, err)
 }
@@ -49,7 +49,7 @@ func TestHandleSNSNotification_InstanceLaunching_InvalidPayload(t *testing.T) {
 	msg := &snsMessage{
 		Message: `{"LifecycleTransition": "autoscaling:EC2_INSTANCE_LAUNCHING"}`,
 	}
-	status, err := handleSNSNotification(newTestRepo(), shushLog, nil, newTestTokenGenerator(), msg)
+	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg)
 	assert.NotNil(t, err)
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Regexp(t, "missing required fields in lifecycle action.+", err.Error())
@@ -65,7 +65,7 @@ func TestHandleSNSNotification_InstanceLaunching(t *testing.T) {
 			"LifecycleHookName": "huzzah-9001"
 		}`, ""), ""),
 	}
-	status, err := handleSNSNotification(newTestRepo(), shushLog, nil, newTestTokenGenerator(), msg)
+	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Nil(t, err)
 }
@@ -80,7 +80,7 @@ func TestHandleSNSNotification_InstanceTerminating(t *testing.T) {
 			"LifecycleHookName": "huzzah-9001"
 		}`, ""), ""),
 	}
-	status, err := handleSNSNotification(newTestRepo(), shushLog, nil, nil, msg)
+	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Nil(t, err)
 }

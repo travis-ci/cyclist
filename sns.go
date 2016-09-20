@@ -12,19 +12,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	snsMessageHandlers = map[string]func(repo, logrus.FieldLogger, snsiface.SNSAPI, tokenGenerator, *snsMessage) (int, error){}
-
-	autoScalingTransitionHandlers = map[string]func(repo, logrus.FieldLogger, tokenGenerator, *lifecycleAction) error{}
-)
-
-func init() {
-	snsMessageHandlers["SubscriptionConfirmation"] = handleSNSSubscriptionConfirmation
-	snsMessageHandlers["Notification"] = handleSNSNotification
-	autoScalingTransitionHandlers["autoscaling:EC2_INSTANCE_LAUNCHING"] = handleAutoScalingInstanceLaunching
-	autoScalingTransitionHandlers["autoscaling:EC2_INSTANCE_TERMINATING"] = handleAutoScalingInstanceTerminating
-}
-
 func newSNSHandlerFunc(db repo, log logrus.FieldLogger, snsSvc snsiface.SNSAPI, snsVerify bool, tokGen tokenGenerator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log = log.WithFields(logrus.Fields{
@@ -51,8 +38,15 @@ func newSNSHandlerFunc(db repo, log logrus.FieldLogger, snsSvc snsiface.SNSAPI, 
 			}
 		}
 
-		snsMessageHandler, ok := snsMessageHandlers[msg.Type]
-		if !ok {
+		err = nil
+		status := http.StatusBadRequest
+
+		switch msg.Type {
+		case "SubscriptionConfirmation":
+			status, err = handleSNSSubscriptionConfirmation(snsSvc, msg)
+		case "Notification":
+			status, err = handleSNSNotification(db, log, tokGen, msg)
+		default:
 			log.WithField("type", msg.Type).Warn("unknown sns message type")
 			jsonRespond(w, http.StatusBadRequest, map[string]interface{}{
 				"error": fmt.Sprintf("unknown message type '%s'", msg.Type),
@@ -60,19 +54,22 @@ func newSNSHandlerFunc(db repo, log logrus.FieldLogger, snsSvc snsiface.SNSAPI, 
 			return
 		}
 
-		status, err := snsMessageHandler(db, log, snsSvc, tokGen, msg)
 		if err != nil {
-			log.WithField("err", err).Error("failed to handle sns confirmation")
+			log.WithFields(logrus.Fields{
+				"err":  err,
+				"type": msg.Type,
+			}).Error("failed to handle sns message")
 			jsonRespond(w, status, &jsonErr{Err: err})
 			return
 		}
+
 		jsonRespond(w, status, &jsonMsg{
 			Message: fmt.Sprintf("handled '%s' message", msg.Type),
 		})
 	}
 }
 
-func handleSNSSubscriptionConfirmation(_ repo, _ logrus.FieldLogger, snsSvc snsiface.SNSAPI, _ tokenGenerator, msg *snsMessage) (int, error) {
+func handleSNSSubscriptionConfirmation(snsSvc snsiface.SNSAPI, msg *snsMessage) (int, error) {
 	params := &sns.ConfirmSubscriptionInput{
 		Token:    aws.String(msg.Token),
 		TopicArn: aws.String(msg.TopicARN),
@@ -84,35 +81,40 @@ func handleSNSSubscriptionConfirmation(_ repo, _ logrus.FieldLogger, snsSvc snsi
 	return http.StatusOK, nil
 }
 
-func handleSNSNotification(db repo, log logrus.FieldLogger, _ snsiface.SNSAPI, tokGen tokenGenerator, msg *snsMessage) (int, error) {
-	action, err := msg.lifecycleAction()
+func handleSNSNotification(db repo, log logrus.FieldLogger, tokGen tokenGenerator, msg *snsMessage) (int, error) {
+	la, err := msg.lifecycleAction()
 	if err != nil {
 		return http.StatusBadRequest, errors.Wrap(err, "invalid json received in sns Message")
 	}
 
-	if action == nil {
+	if la == nil {
 		return http.StatusBadRequest, errors.New("no lifecycle action present in sns Message")
 	}
 
-	if action.Event == "autoscaling:TEST_NOTIFICATION" {
-		log.WithField("event", action.Event).Debug("ignoring")
+	if la.Event == "autoscaling:TEST_NOTIFICATION" {
+		log.WithField("event", la.Event).Debug("ignoring")
 		return http.StatusAccepted, nil
 	}
 
-	autoScalingTransitionHandler, ok := autoScalingTransitionHandlers[action.LifecycleTransition]
-	if !ok {
-		log.WithField("transition", action.LifecycleTransition).Warn("unknown lifecycle transition")
-		return http.StatusBadRequest, fmt.Errorf("unknown lifecycle transition %q", action.LifecycleTransition)
+	err = nil
+
+	switch la.LifecycleTransition {
+	case "autoscaling:EC2_INSTANCE_LAUNCHING":
+		err = handleAutoScalingInstanceLaunching(db, log, tokGen, la)
+	case "autoscaling:EC2_INSTANCE_TERMINATING":
+		err = handleAutoScalingInstanceTerminating(db, log, la)
+	default:
+		log.WithField("transition", la.LifecycleTransition).Warn("unknown lifecycle transition")
+		return http.StatusBadRequest, fmt.Errorf("unknown lifecycle transition %q", la.LifecycleTransition)
 	}
 
-	err = autoScalingTransitionHandler(db, log, tokGen, action)
 	if err != nil {
 		return http.StatusBadRequest, err
 	}
 	return http.StatusOK, nil
 }
 
-func handleAutoScalingInstanceTerminating(db repo, log logrus.FieldLogger, _ tokenGenerator, la *lifecycleAction) error {
+func handleAutoScalingInstanceTerminating(db repo, log logrus.FieldLogger, la *lifecycleAction) error {
 	log.WithField("action", la).Debug("setting expected_state to down")
 	err := db.setInstanceState(la.EC2InstanceID, "down")
 	if err != nil {
