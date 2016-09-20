@@ -143,7 +143,7 @@ func (srv *server) requireInstAuth(w http.ResponseWriter, req *http.Request, nex
 func txtRespond(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(status)
-	fmt.Fprintf(w, "%v\n", data)
+	fmt.Fprintf(w, "%v", data)
 }
 
 func jsonRespond(w http.ResponseWriter, status int, data interface{}) {
