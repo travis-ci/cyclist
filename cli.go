@@ -3,6 +3,7 @@ package cyclist
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
@@ -34,23 +35,29 @@ func NewCLI() *cli.App {
 				Aliases: []string{"R"},
 				EnvVars: []string{"CYCLIST_REDIS_URL", "REDIS_URL"},
 			},
-			&cli.UintFlag{
+			&cli.DurationFlag{
 				Name:    "event-ttl",
-				Value:   uint(60 * 60 * 48),
-				Usage:   "duration in seconds since last update that instance lifecycle event data will be kept",
+				Value:   48 * time.Hour,
+				Usage:   "duration since last update that instance lifecycle event data will be kept",
 				EnvVars: []string{"CYCLIST_EVENT_TTL", "EVENT_TTL"},
 			},
-			&cli.UintFlag{
+			&cli.DurationFlag{
 				Name:    "temp-token-ttl",
-				Value:   uint(60 * 5),
-				Usage:   "duration in seconds since last access that instance temporary token will be kept",
+				Value:   5 * time.Minute,
+				Usage:   "duration that instance temporary token will be kept",
 				EnvVars: []string{"CYCLIST_TEMP_TOKEN_TTL", "TEMP_TOKEN_TTL"},
 			},
-			&cli.UintFlag{
+			&cli.DurationFlag{
 				Name:    "token-ttl",
-				Value:   uint(60 * 60),
-				Usage:   "duration in seconds since last access that instance token will be kept",
+				Value:   time.Hour,
+				Usage:   "duration since last access that instance token will be kept",
 				EnvVars: []string{"CYCLIST_TOKEN_TTL", "TOKEN_TTL"},
+			},
+			&cli.DurationFlag{
+				Name:    "lifecycle-action-ttl",
+				Value:   7 * 24 * time.Hour,
+				Usage:   "duration that lifecycle actions records will be kept",
+				EnvVars: []string{"CYCLIST_LIFECYCLE_ACTION_TTL", "LIFECYCLE_ACTION_TTL"},
 			},
 			&cli.BoolFlag{
 				Name:    "debug",
@@ -124,9 +131,10 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 		cg:  buildRedisPool(ctx.String("redis-url")),
 		log: log,
 
-		instEventTTL:   ctx.Uint("event-ttl"),
-		instTempTokTTL: ctx.Uint("temp-token-ttl"),
-		instTokTTL:     ctx.Uint("token-ttl"),
+		instEventTTL:           uint(ctx.Duration("event-ttl").Seconds()),
+		instLifecycleActionTTL: uint(ctx.Duration("lifecycle-action-ttl").Seconds()),
+		instTempTokTTL:         uint(ctx.Duration("temp-token-ttl").Seconds()),
+		instTokTTL:             uint(ctx.Duration("token-ttl").Seconds()),
 	}
 
 	snsSvc := sns.New(session.New(), &aws.Config{
@@ -176,9 +184,10 @@ func runSqsSetup(ctx *cli.Context) (*sqsHandler, context.Context, error) {
 		cg:  buildRedisPool(ctx.String("redis-url")),
 		log: log,
 
-		instEventTTL:		ctx.Uint("event-ttl"),
-		instTempTokTTL: ctx.Uint("temp-token-ttl"),
-		instTokTTL:			ctx.Uint("token-ttl"),
+		instEventTTL:						uint(ctx.Duration("event-ttl").Seconds()),
+		instLifecycleActionTTL: uint(ctx.Duration("lifecycle-action-ttl").Seconds()),
+		instTempTokTTL:					uint(ctx.Duration("temp-token-ttl").Seconds()),
+		instTokTTL:							uint(ctx.Duration("token-ttl").Seconds()),
 	}
 
 	sqsSvc := sqs.New(session.New())

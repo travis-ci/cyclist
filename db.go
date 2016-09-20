@@ -31,7 +31,7 @@ type repo interface {
 
 	storeInstanceLifecycleAction(la *lifecycleAction) error
 	fetchInstanceLifecycleAction(transition, instanceID string) (*lifecycleAction, error)
-	wipeInstanceLifecycleAction(transition, instanceID string) error
+	completeInstanceLifecycleAction(transition, instanceID string) error
 
 	storeInstanceToken(instanceID, token string) error
 	storeTempInstanceToken(instanceID, token string) error
@@ -43,9 +43,10 @@ type redisRepo struct {
 	cg  redisConnGetter
 	log logrus.FieldLogger
 
-	instEventTTL   uint
-	instTempTokTTL uint
-	instTokTTL     uint
+	instEventTTL           uint
+	instLifecycleActionTTL uint
+	instTempTokTTL         uint
+	instTokTTL             uint
 }
 
 func (rr *redisRepo) setInstanceState(instanceID, state string) error {
@@ -168,6 +169,12 @@ func (rr *redisRepo) storeInstanceLifecycleAction(a *lifecycleAction) error {
 		return err
 	}
 
+	err = conn.Send("EXPIRE", hashKey, rr.instLifecycleActionTTL)
+	if err != nil {
+		conn.Do("DISCARD")
+		return err
+	}
+
 	_, err = conn.Do("EXEC")
 	return err
 }
@@ -179,15 +186,6 @@ func (rr *redisRepo) fetchInstanceLifecycleAction(transition, instanceID string)
 
 	conn := rr.cg.Get()
 	defer rr.closeConn(conn)
-
-	exists, err := redis.Bool(conn.Do("SISMEMBER", fmt.Sprintf("%s:instance_%s", RedisNamespace, transition), instanceID))
-	if !exists {
-		return nil, fmt.Errorf("instance '%s' not in set for transition '%s'", instanceID, transition)
-	}
-
-	if err != nil {
-		return nil, err
-	}
 
 	attrs, err := redis.Values(conn.Do("HGETALL", fmt.Sprintf("%s:instance_%s:%s", RedisNamespace, transition, instanceID)))
 	if err != nil {
@@ -205,7 +203,7 @@ func (rr *redisRepo) fetchInstanceLifecycleAction(transition, instanceID string)
 	return ala, nil
 }
 
-func (rr *redisRepo) wipeInstanceLifecycleAction(transition, instanceID string) error {
+func (rr *redisRepo) completeInstanceLifecycleAction(transition, instanceID string) error {
 	if strings.TrimSpace(instanceID) == "" {
 		return errEmptyInstanceID
 	}
@@ -224,7 +222,10 @@ func (rr *redisRepo) wipeInstanceLifecycleAction(transition, instanceID string) 
 		return err
 	}
 
-	err = conn.Send("DEL", fmt.Sprintf("%s:instance_%s:%s", RedisNamespace, transition, instanceID))
+	err = conn.Send("HSET",
+		fmt.Sprintf("%s:instance_%s:%s", RedisNamespace, transition, instanceID),
+		"completed", true)
+
 	if err != nil {
 		conn.Do("DISCARD")
 		return err
@@ -247,7 +248,9 @@ func (rr *redisRepo) storeInstanceTokenfTTL(fmtString, instanceID, token string,
 		return errEmptyInstanceID
 	}
 
-	if strings.TrimSpace(token) == "" {
+	token = strings.TrimSpace(token)
+
+	if token == "" {
 		return errEmptyToken
 	}
 

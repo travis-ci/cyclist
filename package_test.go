@@ -130,10 +130,10 @@ func (tr *testRepo) fetchInstanceLifecycleAction(transition, instanceID string) 
 	return nil, fmt.Errorf("no lifecycle action found for transition '%s', instance ID '%s'", transition, instanceID)
 }
 
-func (tr *testRepo) wipeInstanceLifecycleAction(transition, instanceID string) error {
+func (tr *testRepo) completeInstanceLifecycleAction(transition, instanceID string) error {
 	key := fmt.Sprintf("%s:%s", transition, instanceID)
 	if _, ok := tr.la[key]; ok {
-		delete(tr.la, key)
+		tr.la[key].Completed = true
 		return nil
 	}
 	return fmt.Errorf("no lifecycle action found for transition '%s', instance ID '%s'", transition, instanceID)

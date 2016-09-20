@@ -121,7 +121,7 @@ func TestRedisRepo_fetchInstanceEvents_WithEmptyInstanceID(t *testing.T) {
 }
 
 func TestRedisRepo_storeInstanceLifecycleAction(t *testing.T) {
-	rr := &redisRepo{cg: &testRedisConnGetter{}}
+	rr := &redisRepo{cg: &testRedisConnGetter{}, instLifecycleActionTTL: uint(42)}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
@@ -130,6 +130,7 @@ func TestRedisRepo_storeInstanceLifecycleAction(t *testing.T) {
 		"lifecycle_action_token", "TOKEYTOKETOK",
 		"auto_scaling_group_name", "menial-jar-legs",
 		"lifecycle_hook_name", "frazzled-top-zipper").Expect("OK!")
+	conn.Command("EXPIRE", "cyclist:instance_loathing:i-fafafaf", uint(42)).Expect("OK!")
 	conn.Command("EXEC").Expect("OK!")
 
 	err := rr.storeInstanceLifecycleAction(&lifecycleAction{
@@ -188,7 +189,7 @@ func TestRedisRepo_storeInstanceLifecycleAction_WithFailedSadd(t *testing.T) {
 }
 
 func TestRedisRepo_storeInstanceLifecycleAction_WithFailedHmset(t *testing.T) {
-	rr := &redisRepo{cg: &testRedisConnGetter{}}
+	rr := &redisRepo{cg: &testRedisConnGetter{}, instLifecycleActionTTL: uint(42)}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
@@ -197,6 +198,7 @@ func TestRedisRepo_storeInstanceLifecycleAction_WithFailedHmset(t *testing.T) {
 		"lifecycle_action_token", "TOKEYTOKETOK",
 		"auto_scaling_group_name", "menial-jar-legs",
 		"lifecycle_hook_name", "frazzled-top-zipper").ExpectError(errors.New("no hmm sets"))
+	conn.Command("EXPIRE", "cyclist:instance_loathing:i-fafafaf", uint(42)).Expect("OK!")
 	conn.Command("DISCARD").Expect("OK!")
 
 	err := rr.storeInstanceLifecycleAction(&lifecycleAction{
@@ -212,7 +214,7 @@ func TestRedisRepo_storeInstanceLifecycleAction_WithFailedHmset(t *testing.T) {
 }
 
 func TestRedisRepo_storeInstanceLifecycleAction_WithFailedExec(t *testing.T) {
-	rr := &redisRepo{cg: &testRedisConnGetter{}}
+	rr := &redisRepo{cg: &testRedisConnGetter{}, instLifecycleActionTTL: uint(42)}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
@@ -221,6 +223,7 @@ func TestRedisRepo_storeInstanceLifecycleAction_WithFailedExec(t *testing.T) {
 		"lifecycle_action_token", "TOKEYTOKETOK",
 		"auto_scaling_group_name", "menial-jar-legs",
 		"lifecycle_hook_name", "frazzled-top-zipper").Expect("OK!")
+	conn.Command("EXPIRE", "cyclist:instance_loathing:i-fafafaf", uint(42)).Expect("OK!")
 	conn.Command("EXEC").ExpectError(errors.New("not exectly"))
 
 	err := rr.storeInstanceLifecycleAction(&lifecycleAction{
@@ -265,19 +268,6 @@ func TestRedisRepo_fetchInstanceLifecycleAction_WithEmptyInstanceID(t *testing.T
 	assert.Nil(t, la)
 }
 
-func TestRedisRepo_fetchInstanceLifecycleAction_WithFailedSismember(t *testing.T) {
-	rr := &redisRepo{cg: &testRedisConnGetter{}}
-
-	conn := rr.cg.Get().(*redigomock.Conn)
-	conn.Command("SISMEMBER", "cyclist:instance_larping", "i-fafafaf").Expect(int64(0))
-
-	la, err := rr.fetchInstanceLifecycleAction("larping", "i-fafafaf")
-	assert.Nil(t, la)
-	assert.NotNil(t, err)
-	assert.Equal(t,
-		"instance 'i-fafafaf' not in set for transition 'larping'", err.Error())
-}
-
 func TestRedisRepo_fetchInstanceLifecycleAction_WithFailedHgetall(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
@@ -291,39 +281,39 @@ func TestRedisRepo_fetchInstanceLifecycleAction_WithFailedHgetall(t *testing.T) 
 	assert.Equal(t, "not so getall", err.Error())
 }
 
-func TestRedisRepo_wipeInstanceLifecycleAction(t *testing.T) {
+func TestRedisRepo_completeInstanceLifecycleAction(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
 	conn.Command("SREM", "cyclist:instance_fuming", "i-fafafaf").Expect("OK!")
-	conn.Command("DEL", "cyclist:instance_fuming:i-fafafaf").Expect("OK!")
+	conn.Command("HSET", "cyclist:instance_fuming:i-fafafaf", "completed", true).Expect("OK!")
 	conn.Command("EXEC").Expect("OK!")
 
-	err := rr.wipeInstanceLifecycleAction("fuming", "i-fafafaf")
+	err := rr.completeInstanceLifecycleAction("fuming", "i-fafafaf")
 	assert.Nil(t, err)
 }
 
-func TestRedisRepo_wipeInstanceLifecycleAction_WithEmptyInstanceID(t *testing.T) {
+func TestRedisRepo_completeInstanceLifecycleAction_WithEmptyInstanceID(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
-	err := rr.wipeInstanceLifecycleAction("fuming", "")
+	err := rr.completeInstanceLifecycleAction("fuming", "")
 	assert.NotNil(t, err)
 	assert.Equal(t, errEmptyInstanceID, err)
 }
 
-func TestRedisRepo_wipeInstanceLifecycleAction_WithFailedMulti(t *testing.T) {
+func TestRedisRepo_completeInstanceLifecycleAction_WithFailedMulti(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").ExpectError(errors.New("multi-nope"))
 
-	err := rr.wipeInstanceLifecycleAction("fuming", "i-fafafaf")
+	err := rr.completeInstanceLifecycleAction("fuming", "i-fafafaf")
 	assert.NotNil(t, err)
 	assert.Equal(t, "multi-nope", err.Error())
 }
 
-func TestRedisRepo_wipeInstanceLifecycleAction_WithFailedSrem(t *testing.T) {
+func TestRedisRepo_completeInstanceLifecycleAction_WithFailedSrem(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
@@ -331,35 +321,35 @@ func TestRedisRepo_wipeInstanceLifecycleAction_WithFailedSrem(t *testing.T) {
 	conn.Command("SREM", "cyclist:instance_fuming", "i-fafafaf").ExpectError(errors.New("not srem"))
 	conn.Command("DISCARD").Expect("OK!")
 
-	err := rr.wipeInstanceLifecycleAction("fuming", "i-fafafaf")
+	err := rr.completeInstanceLifecycleAction("fuming", "i-fafafaf")
 	assert.NotNil(t, err)
 	assert.Equal(t, "not srem", err.Error())
 }
 
-func TestRedisRepo_wipeInstanceLifecycleAction_WithFailedDel(t *testing.T) {
+func TestRedisRepo_completeInstanceLifecycleAction_WithFailedDel(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
 	conn.Command("SREM", "cyclist:instance_fuming", "i-fafafaf").Expect("OK!")
-	conn.Command("DEL", "cyclist:instance_fuming:i-fafafaf").ExpectError(errors.New("control alt"))
+	conn.Command("HSET", "cyclist:instance_fuming:i-fafafaf", "completed", true).ExpectError(errors.New("control alt"))
 	conn.Command("DISCARD").Expect("OK!")
 
-	err := rr.wipeInstanceLifecycleAction("fuming", "i-fafafaf")
+	err := rr.completeInstanceLifecycleAction("fuming", "i-fafafaf")
 	assert.NotNil(t, err)
 	assert.Equal(t, "control alt", err.Error())
 }
 
-func TestRedisRepo_wipeInstanceLifecycleAction_WithFailedExec(t *testing.T) {
+func TestRedisRepo_completeInstanceLifecycleAction_WithFailedExec(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
 	conn.Command("SREM", "cyclist:instance_fuming", "i-fafafaf").Expect("OK!")
-	conn.Command("DEL", "cyclist:instance_fuming:i-fafafaf").Expect("OK!")
+	conn.Command("HSET", "cyclist:instance_fuming:i-fafafaf", "completed", true).Expect("OK!")
 	conn.Command("EXEC").ExpectError(errors.New("def not exectly"))
 
-	err := rr.wipeInstanceLifecycleAction("fuming", "i-fafafaf")
+	err := rr.completeInstanceLifecycleAction("fuming", "i-fafafaf")
 	assert.NotNil(t, err)
 	assert.Equal(t, "def not exectly", err.Error())
 }

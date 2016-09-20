@@ -275,8 +275,9 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
 	assert.Equal(f.t, 200, res.StatusCode)
 
 	la, err := f.db.fetchInstanceLifecycleAction("launching", f.vars["instance_id"])
-	assert.Nil(f.t, la)
-	assert.NotNil(f.t, err)
+	assert.NotNil(f.t, la)
+	assert.Nil(f.t, err)
+	assert.True(f.t, la.Completed)
 
 	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
@@ -398,8 +399,9 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
 	assert.Equal(f.t, 200, res.StatusCode)
 
 	la, err := f.db.fetchInstanceLifecycleAction("terminating", f.vars["instance_id"])
-	assert.Nil(f.t, la)
-	assert.NotNil(f.t, err)
+	assert.NotNil(f.t, la)
+	assert.Nil(f.t, err)
+	assert.True(f.t, la.Completed)
 
 	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.NotNil(f.t, err)
@@ -407,7 +409,7 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
 	assert.Equal(f.t, "completed", f.vars["instance_terminating_state"])
 
 	assert.Len(f.t, f.db.(*testRepo).s, 0)
-	assert.Len(f.t, f.db.(*testRepo).la, 0)
+	assert.Len(f.t, f.db.(*testRepo).la, 2)
 
 	res, err = f.authHTTP("GET", fmt.Sprintf("/events/%s", f.vars["instance_id"]), nil)
 	assert.Nil(f.t, err)

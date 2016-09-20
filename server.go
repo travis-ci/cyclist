@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
@@ -90,7 +91,7 @@ func (srv *server) authd(f http.HandlerFunc) http.Handler {
 }
 
 func (srv *server) requireAuth(w http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
-	authHeader := req.Header.Get("Authorization")
+	authHeader := strings.TrimSpace(req.Header.Get("Authorization"))
 	if authHeader == "" {
 		w.Header().Set("WWW-Authenticate", "token")
 		jsonRespond(w, http.StatusUnauthorized, &jsonErr{Err: errUnauthorized})
@@ -112,7 +113,7 @@ func (srv *server) instAuthd(f http.HandlerFunc) http.Handler {
 }
 
 func (srv *server) requireInstAuth(w http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
-	authHeader := req.Header.Get("Authorization")
+	authHeader := strings.TrimSpace(req.Header.Get("Authorization"))
 	if authHeader == "" {
 		w.Header().Set("WWW-Authenticate", "token")
 		jsonRespond(w, http.StatusUnauthorized, &jsonErr{Err: errUnauthorized})
