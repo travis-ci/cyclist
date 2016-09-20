@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -237,19 +238,21 @@ func (f *fullLifecycleManagementHTTP) stepGetInstanceToken() {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/tokens/%s", f.ts.URL, f.vars["instance_id"]), nil)
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, req)
+	req.Header.Set("Accept", "text/plain, application/json, */*")
 	req.Header.Set("Authorization", fmt.Sprintf("token %s", f.srv.authTokens[0]))
 	client := &http.Client{}
 	res, err := client.Do(req)
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
 	assert.Equal(f.t, 200, res.StatusCode)
+	assert.Regexp(f.t, "\\btext\\b", res.Header.Get("Content-Type"))
 
-	tokJSON := &jsonInstanceToken{}
-	err = json.NewDecoder(res.Body).Decode(tokJSON)
+	body, err := ioutil.ReadAll(res.Body)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, tokJSON.Token, 36)
+	tok := strings.TrimSpace(string(body))
+	assert.Len(f.t, tok, 36)
 
-	f.vars["instance_token"] = tokJSON.Token
+	f.vars["instance_token"] = tok
 
 	res, err = f.authHTTP("GET", fmt.Sprintf("/events/%s", f.vars["instance_id"]), nil)
 	assert.Nil(f.t, err)

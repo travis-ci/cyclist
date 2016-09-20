@@ -139,6 +139,12 @@ func (srv *server) requireInstAuth(w http.ResponseWriter, req *http.Request, nex
 	jsonRespond(w, http.StatusForbidden, &jsonErr{Err: errForbidden})
 }
 
+func txtRespond(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(status)
+	fmt.Fprintf(w, "%v\n", data)
+}
+
 func jsonRespond(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	jsonBytes, err := json.MarshalIndent(data, "", "  ")
