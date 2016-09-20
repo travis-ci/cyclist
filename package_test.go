@@ -39,6 +39,7 @@ type testRepo struct {
 	s  map[string]string
 	e  map[string]map[string]*lifecycleEvent
 	la map[string]*lifecycleAction
+	t  map[string]string
 }
 
 func newTestRepo() *testRepo {
@@ -46,6 +47,7 @@ func newTestRepo() *testRepo {
 		s:  map[string]string{},
 		e:  map[string]map[string]*lifecycleEvent{},
 		la: map[string]*lifecycleAction{},
+		t:  map[string]string{},
 	}
 }
 
@@ -122,6 +124,19 @@ func (tr *testRepo) wipeInstanceLifecycleAction(transition, instanceID string) e
 	return fmt.Errorf("no lifecycle action found for transition '%s', instance ID '%s'", transition, instanceID)
 }
 
+func (tr *testRepo) fetchInstanceToken(instanceID string) (string, error) {
+	if tok, ok := tr.t[instanceID]; ok {
+		return tok, nil
+	}
+
+	return "", fmt.Errorf("no token for instance '%s'", instanceID)
+}
+
+func (tr *testRepo) storeInstanceToken(instanceID, token string) error {
+	tr.t[instanceID] = token
+	return nil
+}
+
 func newTestSNSService(f func(*request.Request)) snsiface.SNSAPI {
 	svc := sns.New(session.New(), aws.NewConfig().WithRegion("nz-isengard-1"))
 	svc.Handlers.Clear()
@@ -144,4 +159,14 @@ func newTestAutosScalingService(f func(*request.Request)) autoscalingiface.AutoS
 	}
 	svc.Handlers.Build.PushBack(f)
 	return svc
+}
+
+type testTokenGenerator struct{}
+
+func (ttg *testTokenGenerator) GenerateToken() string {
+	return "ffffffff-aaaa-ffff-aaaa-ffffffffffff"
+}
+
+func newTestTokenGenerator() tokenGenerator {
+	return &testTokenGenerator{}
 }

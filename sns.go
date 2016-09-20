@@ -12,7 +12,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-func newSnsHandlerFunc(db repo, log logrus.FieldLogger, snsSvc snsiface.SNSAPI, snsVerify bool) http.HandlerFunc {
+var (
+	snsMessageHandlers = map[string]func(repo, logrus.FieldLogger, snsiface.SNSAPI, tokenGenerator, *snsMessage) (int, error){}
+
+	autoScalingTransitionHandlers = map[string]func(repo, logrus.FieldLogger, tokenGenerator, *lifecycleAction) error{}
+)
+
+func init() {
+	snsMessageHandlers["SubscriptionConfirmation"] = handleSNSSubscriptionConfirmation
+	snsMessageHandlers["Notification"] = handleSNSNotification
+	autoScalingTransitionHandlers["autoscaling:EC2_INSTANCE_LAUNCHING"] = handleAutoScalingInstanceLaunching
+	autoScalingTransitionHandlers["autoscaling:EC2_INSTANCE_TERMINATING"] = handleAutoScalingInstanceTerminating
+}
+
+func newSNSHandlerFunc(db repo, log logrus.FieldLogger, snsSvc snsiface.SNSAPI, snsVerify bool, tokGen tokenGenerator) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log = log.WithFields(logrus.Fields{
 			"path":   r.URL.Path,
@@ -38,40 +51,28 @@ func newSnsHandlerFunc(db repo, log logrus.FieldLogger, snsSvc snsiface.SNSAPI, 
 			}
 		}
 
-		switch msg.Type {
-		case "SubscriptionConfirmation":
-			status, err := handleSNSConfirmation(snsSvc, msg)
-			if err != nil {
-				log.WithField("err", err).Error("failed to handle sns confirmation")
-				jsonRespond(w, status, &jsonErr{Err: err})
-				return
-			}
-			jsonRespond(w, status, &jsonMsg{
-				Message: "subscription confirmed",
-			})
-			return
-		case "Notification":
-			status, err := handleSNSNotification(db, log, msg)
-			if err != nil {
-				log.WithField("err", err).Error("failed to handle sns notification")
-				jsonRespond(w, status, &jsonErr{Err: err})
-				return
-			}
-			jsonRespond(w, status, &jsonMsg{
-				Message: "notification handled",
-			})
-			return
-		default:
+		snsMessageHandler, ok := snsMessageHandlers[msg.Type]
+		if !ok {
 			log.WithField("type", msg.Type).Warn("unknown sns message type")
 			jsonRespond(w, http.StatusBadRequest, map[string]interface{}{
 				"error": fmt.Sprintf("unknown message type '%s'", msg.Type),
 			})
 			return
 		}
+
+		status, err := snsMessageHandler(db, log, snsSvc, tokGen, msg)
+		if err != nil {
+			log.WithField("err", err).Error("failed to handle sns confirmation")
+			jsonRespond(w, status, &jsonErr{Err: err})
+			return
+		}
+		jsonRespond(w, status, &jsonMsg{
+			Message: fmt.Sprintf("handled '%s' message", msg.Type),
+		})
 	}
 }
 
-func handleSNSConfirmation(snsSvc snsiface.SNSAPI, msg *snsMessage) (int, error) {
+func handleSNSSubscriptionConfirmation(_ repo, _ logrus.FieldLogger, snsSvc snsiface.SNSAPI, _ tokenGenerator, msg *snsMessage) (int, error) {
 	params := &sns.ConfirmSubscriptionInput{
 		Token:    aws.String(msg.Token),
 		TopicArn: aws.String(msg.TopicARN),
@@ -83,7 +84,7 @@ func handleSNSConfirmation(snsSvc snsiface.SNSAPI, msg *snsMessage) (int, error)
 	return http.StatusOK, nil
 }
 
-func handleSNSNotification(db repo, log logrus.FieldLogger, msg *snsMessage) (int, error) {
+func handleSNSNotification(db repo, log logrus.FieldLogger, _ snsiface.SNSAPI, tokGen tokenGenerator, msg *snsMessage) (int, error) {
 	action, err := msg.lifecycleAction()
 	if err != nil {
 		return http.StatusBadRequest, errors.Wrap(err, "invalid json received in sns Message")
@@ -98,41 +99,47 @@ func handleSNSNotification(db repo, log logrus.FieldLogger, msg *snsMessage) (in
 		return http.StatusAccepted, nil
 	}
 
-	switch action.LifecycleTransition {
-	case "autoscaling:EC2_INSTANCE_LAUNCHING":
-		log.WithField("action", action).Debug("storing instance launching lifecycle action")
-		err = db.storeInstanceLifecycleAction(action)
-		if err != nil {
-			return http.StatusBadRequest, err
-		}
-		log.WithField("action", action).Debug("setting expected_state to up")
-		err = db.setInstanceState(action.EC2InstanceID, "up")
-		if err != nil {
-			return http.StatusBadRequest, err
-		}
-		err = db.storeInstanceEvent(action.EC2InstanceID, "prelaunching")
-		if err != nil {
-			return http.StatusBadRequest, err
-		}
-		return http.StatusOK, nil
-	case "autoscaling:EC2_INSTANCE_TERMINATING":
-		log.WithField("action", action).Debug("setting expected_state to down")
-		err = db.setInstanceState(action.EC2InstanceID, "down")
-		if err != nil {
-			return http.StatusBadRequest, err
-		}
-		log.WithField("action", action).Debug("storing instance terminating lifecycle action")
-		err = db.storeInstanceLifecycleAction(action)
-		if err != nil {
-			return http.StatusBadRequest, err
-		}
-		err = db.storeInstanceEvent(action.EC2InstanceID, "preterminating")
-		if err != nil {
-			return http.StatusBadRequest, err
-		}
-		return http.StatusOK, nil
-	default:
+	autoScalingTransitionHandler, ok := autoScalingTransitionHandlers[action.LifecycleTransition]
+	if !ok {
 		log.WithField("transition", action.LifecycleTransition).Warn("unknown lifecycle transition")
 		return http.StatusBadRequest, fmt.Errorf("unknown lifecycle transition %q", action.LifecycleTransition)
 	}
+
+	err = autoScalingTransitionHandler(db, log, tokGen, action)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+	return http.StatusOK, nil
+}
+
+func handleAutoScalingInstanceTerminating(db repo, log logrus.FieldLogger, _ tokenGenerator, la *lifecycleAction) error {
+	log.WithField("action", la).Debug("setting expected_state to down")
+	err := db.setInstanceState(la.EC2InstanceID, "down")
+	if err != nil {
+		return err
+	}
+	log.WithField("action", la).Debug("storing instance terminating lifecycle action")
+	err = db.storeInstanceLifecycleAction(la)
+	if err != nil {
+		return err
+	}
+	return db.storeInstanceEvent(la.EC2InstanceID, "preterminating")
+}
+
+func handleAutoScalingInstanceLaunching(db repo, log logrus.FieldLogger, tokGen tokenGenerator, la *lifecycleAction) error {
+	log.WithField("action", la).Debug("storing instance launching lifecycle action")
+	err := db.storeInstanceToken(la.EC2InstanceID, tokGen.GenerateToken())
+	if err != nil {
+		return err
+	}
+	err = db.storeInstanceLifecycleAction(la)
+	if err != nil {
+		return err
+	}
+	log.WithField("action", la).Debug("setting expected_state to up")
+	err = db.setInstanceState(la.EC2InstanceID, "up")
+	if err != nil {
+		return err
+	}
+	return db.storeInstanceEvent(la.EC2InstanceID, "prelaunching")
 }

@@ -14,6 +14,7 @@ import (
 var (
 	errEmptyInstanceID = errors.New("empty instance id")
 	errEmptyEvent      = errors.New("empty event")
+	errEmptyToken      = errors.New("empty token")
 )
 
 type redisConnGetter interface {
@@ -24,11 +25,16 @@ type repo interface {
 	setInstanceState(instanceID, state string) error
 	fetchInstanceState(instanceID string) (string, error)
 	wipeInstanceState(instanceID string) error
+
 	storeInstanceEvent(instanceID, event string) error
 	fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, error)
+
 	storeInstanceLifecycleAction(la *lifecycleAction) error
 	fetchInstanceLifecycleAction(transition, instanceID string) (*lifecycleAction, error)
 	wipeInstanceLifecycleAction(transition, instanceID string) error
+
+	storeInstanceToken(instanceID, token string) error
+	fetchInstanceToken(instanceID string) (string, error)
 }
 
 type redisRepo struct {
@@ -36,6 +42,7 @@ type redisRepo struct {
 	log logrus.FieldLogger
 
 	instEventTTL uint
+	instTokTTL   uint
 }
 
 func (rr *redisRepo) setInstanceState(instanceID, state string) error {
@@ -221,6 +228,43 @@ func (rr *redisRepo) wipeInstanceLifecycleAction(transition, instanceID string) 
 	}
 
 	_, err = conn.Do("EXEC")
+	return err
+}
+
+func (rr *redisRepo) fetchInstanceToken(instanceID string) (string, error) {
+	if strings.TrimSpace(instanceID) == "" {
+		return "", errEmptyInstanceID
+	}
+
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	token, err := redis.String(conn.Do("GET",
+		fmt.Sprintf("%s:instance:%s:token", RedisNamespace, instanceID)))
+	if err != nil {
+		return "", err
+	}
+
+	if strings.TrimSpace(token) == "" {
+		return "", errEmptyToken
+	}
+	return token, nil
+}
+
+func (rr *redisRepo) storeInstanceToken(instanceID, token string) error {
+	if strings.TrimSpace(instanceID) == "" {
+		return errEmptyInstanceID
+	}
+
+	if strings.TrimSpace(token) == "" {
+		return errEmptyToken
+	}
+
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	_, err := conn.Do("SETEX",
+		fmt.Sprintf("%s:instance:%s:token", RedisNamespace, instanceID), rr.instTokTTL, token)
 	return err
 }
 

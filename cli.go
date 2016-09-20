@@ -46,6 +46,12 @@ func NewCLI() *cli.App {
 				Usage:   "duration in seconds since last update that instance lifecycle event data will be kept",
 				EnvVars: []string{"CYCLIST_EVENT_TTL", "EVENT_TTL"},
 			},
+			&cli.UintFlag{
+				Name:    "token-ttl",
+				Value:   uint(60 * 5),
+				Usage:   "duration in seconds since last access that instance token will be kept",
+				EnvVars: []string{"CYCLIST_TOKEN_TTL", "TOKEN_TTL"},
+			},
 			&cli.BoolFlag{
 				Name:    "debug",
 				Value:   false,
@@ -117,6 +123,7 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 		log: log,
 
 		instEventTTL: ctx.Uint("event-ttl"),
+		instTokTTL:   ctx.Uint("token-ttl"),
 	}
 
 	snsSvc := sns.New(session.New(), &aws.Config{
@@ -139,6 +146,7 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 		log:    log,
 		asSvc:  asSvc,
 		snsSvc: snsSvc,
+		tokGen: &uuidTokenGenerator{},
 
 		snsVerify: true,
 	}, nil
@@ -165,6 +173,7 @@ func runSqsSetup(ctx *cli.Context) (*sqsHandler, context.Context, error) {
 		log: log,
 
 		instEventTTL: ctx.Uint("event-ttl"),
+		instTokTTL:   ctx.Uint("token-ttl"),
 	}
 
 	sqsSvc := sqs.New(session.New())
