@@ -1,6 +1,7 @@
 package cyclist
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -97,7 +98,7 @@ func (srv *server) requireAuth(w http.ResponseWriter, req *http.Request, next ht
 	}
 
 	for _, tok := range srv.authTokens {
-		if authHeader == fmt.Sprintf("token %s", tok) {
+		if subtle.ConstantTimeCompare([]byte(authHeader), []byte(fmt.Sprintf("token %s", tok))) == 1 {
 			next(w, req)
 			return
 		}
@@ -130,7 +131,7 @@ func (srv *server) requireInstAuth(w http.ResponseWriter, req *http.Request, nex
 		return
 	}
 
-	if authHeader == fmt.Sprintf("token %s", instTok) {
+	if subtle.ConstantTimeCompare([]byte(authHeader), []byte(fmt.Sprintf("token %s", instTok))) == 1 {
 		next(w, req)
 		return
 	}
