@@ -28,7 +28,7 @@ script:
 - make
 - build/linux/amd64/cyclist --help
 - build/linux/amd64/cyclist serve --help
-- build/linux/amd64/cyclist sqs --help
+# - TODO: #5 build/linux/amd64/cyclist sqs --help
 - grep -q web Procfile
 - grep -q worker Procfile
 

@@ -1,20 +1,14 @@
 package cyclist
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/sns"
-	"github.com/aws/aws-sdk-go/service/sqs"
 
 	"gopkg.in/urfave/cli.v2"
 )
@@ -80,6 +74,7 @@ func NewCLI() *cli.App {
 				},
 				Action: runServe,
 			},
+			/* TODO: #5
 			{
 				Name: "sqs",
 				Flags: []cli.Flag{
@@ -99,6 +94,7 @@ func NewCLI() *cli.App {
 				},
 				Action: runSqs,
 			},
+			*/
 		},
 	}
 }
@@ -152,6 +148,7 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 	}, nil
 }
 
+/* TODO: #5
 func runSqs(ctx *cli.Context) error {
 	sh, cntx, err := runSqsSetup(ctx)
 	if err != nil {
@@ -199,15 +196,6 @@ func runSqsSetup(ctx *cli.Context) (*sqsHandler, context.Context, error) {
 	}, cntx, nil
 }
 
-func buildLog(debug bool) logrus.FieldLogger {
-	log := logrus.New()
-	if debug {
-		log.Level = logrus.DebugLevel
-	}
-	log.WithField("level", log.Level).Debug("using log level")
-	return log
-}
-
 func runSignalHandler(cancel context.CancelFunc) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
@@ -219,4 +207,14 @@ func runSignalHandler(cancel context.CancelFunc) {
 			os.Exit(0)
 		}
 	}
+}
+*/
+
+func buildLog(debug bool) logrus.FieldLogger {
+	log := logrus.New()
+	if debug {
+		log.Level = logrus.DebugLevel
+	}
+	log.WithField("level", log.Level).Debug("using log level")
+	return log
 }

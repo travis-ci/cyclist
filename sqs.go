@@ -1,21 +1,6 @@
 package cyclist
 
-import (
-	"context"
-	"crypto/rand"
-	"math/big"
-	"sync"
-	"time"
-
-	"github.com/Sirupsen/logrus"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
-	"github.com/aws/aws-sdk-go/service/sns/snsiface"
-	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-)
-
+/* TODO: #5
 type sqsHandler struct {
 	queueURL    string
 	concurrency int
@@ -107,3 +92,4 @@ func (sh *sqsHandler) handle(message *sqs.Message) {
 	sh.log.WithField("msg", message).Debug("not really handling")
 	return
 }
+*/
