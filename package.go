@@ -20,10 +20,22 @@ var (
 
 	// RedisNamespace is the namespace used in redis OK!
 	RedisNamespace = "cyclist"
+
+	cyclistMetadata = struct {
+		Version     string `json:"version"`
+		Revision    string `json:"revision"`
+		RevisionURL string `json:"revision_url"`
+		Generated   string `json:"generated"`
+	}{}
 )
 
 func init() {
 	cli.VersionPrinter = customVersionPrinter
+
+	cyclistMetadata.Version = VersionString
+	cyclistMetadata.Revision = RevisionString
+	cyclistMetadata.RevisionURL = RevisionURLString
+	cyclistMetadata.Generated = GeneratedString
 }
 
 func customVersionPrinter(ctx *cli.Context) {
