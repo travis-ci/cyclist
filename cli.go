@@ -2,6 +2,8 @@ package cyclist
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -12,6 +14,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/sns"
 
 	"gopkg.in/urfave/cli.v2"
+)
+
+var (
+	defaultLogOut io.Writer = os.Stdout
 )
 
 // NewCLI makes the cli oh wow!
@@ -229,6 +235,7 @@ func runSignalHandler(cancel context.CancelFunc) {
 
 func buildLog(debug bool) logrus.FieldLogger {
 	log := logrus.New()
+	log.Out = defaultLogOut
 	if debug {
 		log.Level = logrus.DebugLevel
 	}

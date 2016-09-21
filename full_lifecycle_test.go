@@ -41,7 +41,7 @@ func TestFullLifecycleManagementHTTP(t *testing.T) {
 		command.Action = newFullLifecycleManagementHTTP(t).Run
 	}
 
-	app.Run([]string{"cyclist", "serve"})
+	app.Run([]string{"cyclist", "serve", "--port", "17321"})
 }
 
 type fullLifecycleManagementHTTP struct {

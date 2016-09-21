@@ -12,13 +12,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	transitionHandlers = map[string]func(repo, string) error{
-		"launching":   handleLaunchingLifecycleTransition,
-		"terminating": handleTerminatingLifecycleTransition,
-	}
-)
-
 func handleLaunchingLifecycleTransition(db repo, instanceID string) error {
 	err := db.setInstanceState(instanceID, "up")
 	if err != nil {
@@ -77,12 +70,16 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 		log.WithField("err", err).Warn("failed to set lifecycle action bits")
 	}
 
-	if transitionHandler, ok := transitionHandlers[transition]; ok {
+	switch transition {
+	case "launching":
 		log.Info("sending to transition handler")
-		return transitionHandler(db, instanceID)
+		return handleLaunchingLifecycleTransition(db, instanceID)
+	case "terminating":
+		log.Info("sending to transition handler")
+		return handleTerminatingLifecycleTransition(db, instanceID)
+	default:
+		return fmt.Errorf("unknown lifecycle transition '%s'", transition)
 	}
-
-	return fmt.Errorf("unknown lifecycle transition '%s'", transition)
 }
 
 func newLifecycleHandlerFunc(transition string, db repo,

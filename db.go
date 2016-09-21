@@ -147,14 +147,7 @@ func (rr *redisRepo) storeInstanceLifecycleAction(a *lifecycleAction) error {
 	}
 
 	transition := a.Transition()
-	instSetKey := fmt.Sprintf("%s:instance_%s", RedisNamespace, transition)
 	hashKey := fmt.Sprintf("%s:instance_%s:%s", RedisNamespace, transition, a.EC2InstanceID)
-
-	err = conn.Send("SADD", instSetKey, a.EC2InstanceID)
-	if err != nil {
-		conn.Do("DISCARD")
-		return err
-	}
 
 	hmSet := []interface{}{
 		hashKey,
@@ -213,12 +206,6 @@ func (rr *redisRepo) completeInstanceLifecycleAction(transition, instanceID stri
 
 	err := conn.Send("MULTI")
 	if err != nil {
-		return err
-	}
-
-	err = conn.Send("SREM", fmt.Sprintf("%s:instance_%s", RedisNamespace, transition), instanceID)
-	if err != nil {
-		conn.Do("DISCARD")
 		return err
 	}
 

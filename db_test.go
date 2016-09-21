@@ -125,7 +125,6 @@ func TestRedisRepo_storeInstanceLifecycleAction(t *testing.T) {
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
-	conn.Command("SADD", "cyclist:instance_loathing", "i-fafafaf").Expect("OK!")
 	conn.Command("HMSET", "cyclist:instance_loathing:i-fafafaf",
 		"lifecycle_action_token", "TOKEYTOKETOK",
 		"auto_scaling_group_name", "menial-jar-legs",
@@ -168,32 +167,11 @@ func TestRedisRepo_storeInstanceLifecycleAction_WithFailedMulti(t *testing.T) {
 	assert.Equal(t, "not do", err.Error())
 }
 
-func TestRedisRepo_storeInstanceLifecycleAction_WithFailedSadd(t *testing.T) {
-	rr := &redisRepo{cg: &testRedisConnGetter{}}
-
-	conn := rr.cg.Get().(*redigomock.Conn)
-	conn.Command("MULTI").Expect("OK!")
-	conn.Command("SADD", "cyclist:instance_loathing", "i-fafafaf").ExpectError(errors.New("no sads"))
-	conn.Command("DISCARD").Expect("OK!")
-
-	err := rr.storeInstanceLifecycleAction(&lifecycleAction{
-		LifecycleTransition:  "autoscaling:EC2_INSTANCE_LOATHING",
-		EC2InstanceID:        "i-fafafaf",
-		LifecycleActionToken: "TOKEYTOKETOK",
-		AutoScalingGroupName: "menial-jar-legs",
-		LifecycleHookName:    "frazzled-top-zipper",
-	})
-
-	assert.NotNil(t, err)
-	assert.Equal(t, "no sads", err.Error())
-}
-
 func TestRedisRepo_storeInstanceLifecycleAction_WithFailedHmset(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}, instLifecycleActionTTL: uint(42)}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
-	conn.Command("SADD", "cyclist:instance_loathing", "i-fafafaf").Expect("OK!")
 	conn.Command("HMSET", "cyclist:instance_loathing:i-fafafaf",
 		"lifecycle_action_token", "TOKEYTOKETOK",
 		"auto_scaling_group_name", "menial-jar-legs",
@@ -218,7 +196,6 @@ func TestRedisRepo_storeInstanceLifecycleAction_WithFailedExec(t *testing.T) {
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
-	conn.Command("SADD", "cyclist:instance_loathing", "i-fafafaf").Expect("OK!")
 	conn.Command("HMSET", "cyclist:instance_loathing:i-fafafaf",
 		"lifecycle_action_token", "TOKEYTOKETOK",
 		"auto_scaling_group_name", "menial-jar-legs",
@@ -286,7 +263,6 @@ func TestRedisRepo_completeInstanceLifecycleAction(t *testing.T) {
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
-	conn.Command("SREM", "cyclist:instance_fuming", "i-fafafaf").Expect("OK!")
 	conn.Command("HSET", "cyclist:instance_fuming:i-fafafaf", "completed", true).Expect("OK!")
 	conn.Command("EXEC").Expect("OK!")
 
@@ -313,25 +289,11 @@ func TestRedisRepo_completeInstanceLifecycleAction_WithFailedMulti(t *testing.T)
 	assert.Equal(t, "multi-nope", err.Error())
 }
 
-func TestRedisRepo_completeInstanceLifecycleAction_WithFailedSrem(t *testing.T) {
-	rr := &redisRepo{cg: &testRedisConnGetter{}}
-
-	conn := rr.cg.Get().(*redigomock.Conn)
-	conn.Command("MULTI").Expect("OK!")
-	conn.Command("SREM", "cyclist:instance_fuming", "i-fafafaf").ExpectError(errors.New("not srem"))
-	conn.Command("DISCARD").Expect("OK!")
-
-	err := rr.completeInstanceLifecycleAction("fuming", "i-fafafaf")
-	assert.NotNil(t, err)
-	assert.Equal(t, "not srem", err.Error())
-}
-
 func TestRedisRepo_completeInstanceLifecycleAction_WithFailedDel(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
-	conn.Command("SREM", "cyclist:instance_fuming", "i-fafafaf").Expect("OK!")
 	conn.Command("HSET", "cyclist:instance_fuming:i-fafafaf", "completed", true).ExpectError(errors.New("control alt"))
 	conn.Command("DISCARD").Expect("OK!")
 
@@ -345,7 +307,6 @@ func TestRedisRepo_completeInstanceLifecycleAction_WithFailedExec(t *testing.T) 
 
 	conn := rr.cg.Get().(*redigomock.Conn)
 	conn.Command("MULTI").Expect("OK!")
-	conn.Command("SREM", "cyclist:instance_fuming", "i-fafafaf").Expect("OK!")
 	conn.Command("HSET", "cyclist:instance_fuming:i-fafafaf", "completed", true).Expect("OK!")
 	conn.Command("EXEC").ExpectError(errors.New("def not exectly"))
 
