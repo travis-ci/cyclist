@@ -1,7 +1,9 @@
 package cyclist
 
 import (
+	"bytes"
 	"fmt"
+	"testing"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -14,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/sns/snsiface"
 	"github.com/garyburd/redigo/redis"
 	"github.com/rafaeljusto/redigomock"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var (
@@ -23,6 +27,15 @@ var (
 		return l
 	}()
 )
+
+func TestCustomVersionPrinter(t *testing.T) {
+	assert.Equal(t, fmt.Sprintf("%p", cli.VersionPrinter), fmt.Sprintf("%p", customVersionPrinter))
+	buf := &bytes.Buffer{}
+	ctx := cli.NewContext(nil, nil, nil)
+	ctx.App = &cli.App{Name: "hay", Writer: buf}
+	customVersionPrinter(ctx)
+	assert.Regexp(t, "hay v=.* rev=.* d=.*", buf.String())
+}
 
 type testRedisConnGetter struct {
 	Conn *redigomock.Conn
@@ -39,6 +52,8 @@ type testRepo struct {
 	s  map[string]string
 	e  map[string]map[string]*lifecycleEvent
 	la map[string]*lifecycleAction
+	t  map[string]string
+	tt map[string]string
 }
 
 func newTestRepo() *testRepo {
@@ -46,6 +61,8 @@ func newTestRepo() *testRepo {
 		s:  map[string]string{},
 		e:  map[string]map[string]*lifecycleEvent{},
 		la: map[string]*lifecycleAction{},
+		t:  map[string]string{},
+		tt: map[string]string{},
 	}
 }
 
@@ -113,13 +130,39 @@ func (tr *testRepo) fetchInstanceLifecycleAction(transition, instanceID string) 
 	return nil, fmt.Errorf("no lifecycle action found for transition '%s', instance ID '%s'", transition, instanceID)
 }
 
-func (tr *testRepo) wipeInstanceLifecycleAction(transition, instanceID string) error {
+func (tr *testRepo) completeInstanceLifecycleAction(transition, instanceID string) error {
 	key := fmt.Sprintf("%s:%s", transition, instanceID)
 	if _, ok := tr.la[key]; ok {
-		delete(tr.la, key)
+		tr.la[key].Completed = true
 		return nil
 	}
 	return fmt.Errorf("no lifecycle action found for transition '%s', instance ID '%s'", transition, instanceID)
+}
+
+func (tr *testRepo) fetchInstanceToken(instanceID string) (string, error) {
+	if tok, ok := tr.t[instanceID]; ok {
+		return tok, nil
+	}
+
+	return "", fmt.Errorf("no token for instance '%s'", instanceID)
+}
+
+func (tr *testRepo) storeInstanceToken(instanceID, token string) error {
+	tr.t[instanceID] = token
+	return nil
+}
+
+func (tr *testRepo) fetchTempInstanceToken(instanceID string) (string, error) {
+	if tok, ok := tr.tt[instanceID]; ok {
+		return tok, nil
+	}
+
+	return "", fmt.Errorf("no token for instance '%s'", instanceID)
+}
+
+func (tr *testRepo) storeTempInstanceToken(instanceID, token string) error {
+	tr.tt[instanceID] = token
+	return nil
 }
 
 func newTestSNSService(f func(*request.Request)) snsiface.SNSAPI {
@@ -144,4 +187,14 @@ func newTestAutosScalingService(f func(*request.Request)) autoscalingiface.AutoS
 	}
 	svc.Handlers.Build.PushBack(f)
 	return svc
+}
+
+type testTokenGenerator struct{}
+
+func (ttg *testTokenGenerator) GenerateToken() string {
+	return "ffffffff-aaaa-ffff-aaaa-ffffffffffff"
+}
+
+func newTestTokenGenerator() tokenGenerator {
+	return &testTokenGenerator{}
 }

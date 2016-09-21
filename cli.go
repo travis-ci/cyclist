@@ -1,22 +1,23 @@
 package cyclist
 
 import (
-	"context"
-	"errors"
 	"fmt"
+	"io"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/sns"
-	"github.com/aws/aws-sdk-go/service/sqs"
 
 	"gopkg.in/urfave/cli.v2"
+)
+
+var (
+	defaultLogOut io.Writer = os.Stdout
 )
 
 // NewCLI makes the cli oh wow!
@@ -40,11 +41,29 @@ func NewCLI() *cli.App {
 				Aliases: []string{"R"},
 				EnvVars: []string{"CYCLIST_REDIS_URL", "REDIS_URL"},
 			},
-			&cli.UintFlag{
+			&cli.DurationFlag{
 				Name:    "event-ttl",
-				Value:   uint(60 * 60 * 48),
-				Usage:   "duration in seconds since last update that instance lifecycle event data will be kept",
+				Value:   48 * time.Hour,
+				Usage:   "duration since last update that instance lifecycle event data will be kept",
 				EnvVars: []string{"CYCLIST_EVENT_TTL", "EVENT_TTL"},
+			},
+			&cli.DurationFlag{
+				Name:    "temp-token-ttl",
+				Value:   5 * time.Minute,
+				Usage:   "duration that instance temporary token will be kept",
+				EnvVars: []string{"CYCLIST_TEMP_TOKEN_TTL", "TEMP_TOKEN_TTL"},
+			},
+			&cli.DurationFlag{
+				Name:    "token-ttl",
+				Value:   time.Hour,
+				Usage:   "duration since last access that instance token will be kept",
+				EnvVars: []string{"CYCLIST_TOKEN_TTL", "TOKEN_TTL"},
+			},
+			&cli.DurationFlag{
+				Name:    "lifecycle-action-ttl",
+				Value:   7 * 24 * time.Hour,
+				Usage:   "duration that lifecycle actions records will be kept",
+				EnvVars: []string{"CYCLIST_LIFECYCLE_ACTION_TTL", "LIFECYCLE_ACTION_TTL"},
 			},
 			&cli.BoolFlag{
 				Name:    "debug",
@@ -74,6 +93,7 @@ func NewCLI() *cli.App {
 				},
 				Action: runServe,
 			},
+			/* TODO: #5
 			{
 				Name: "sqs",
 				Flags: []cli.Flag{
@@ -93,6 +113,7 @@ func NewCLI() *cli.App {
 				},
 				Action: runSqs,
 			},
+			*/
 		},
 	}
 }
@@ -116,7 +137,10 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 		cg:  buildRedisPool(ctx.String("redis-url")),
 		log: log,
 
-		instEventTTL: ctx.Uint("event-ttl"),
+		instEventTTL:           uint(ctx.Duration("event-ttl").Seconds()),
+		instLifecycleActionTTL: uint(ctx.Duration("lifecycle-action-ttl").Seconds()),
+		instTempTokTTL:         uint(ctx.Duration("temp-token-ttl").Seconds()),
+		instTokTTL:             uint(ctx.Duration("token-ttl").Seconds()),
 	}
 
 	snsSvc := sns.New(session.New(), &aws.Config{
@@ -139,11 +163,13 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 		log:    log,
 		asSvc:  asSvc,
 		snsSvc: snsSvc,
+		tokGen: &uuidTokenGenerator{},
 
 		snsVerify: true,
 	}, nil
 }
 
+/* TODO: #5
 func runSqs(ctx *cli.Context) error {
 	sh, cntx, err := runSqsSetup(ctx)
 	if err != nil {
@@ -164,7 +190,10 @@ func runSqsSetup(ctx *cli.Context) (*sqsHandler, context.Context, error) {
 		cg:  buildRedisPool(ctx.String("redis-url")),
 		log: log,
 
-		instEventTTL: ctx.Uint("event-ttl"),
+		instEventTTL:						uint(ctx.Duration("event-ttl").Seconds()),
+		instLifecycleActionTTL: uint(ctx.Duration("lifecycle-action-ttl").Seconds()),
+		instTempTokTTL:					uint(ctx.Duration("temp-token-ttl").Seconds()),
+		instTokTTL:							uint(ctx.Duration("token-ttl").Seconds()),
 	}
 
 	sqsSvc := sqs.New(session.New())
@@ -190,15 +219,6 @@ func runSqsSetup(ctx *cli.Context) (*sqsHandler, context.Context, error) {
 	}, cntx, nil
 }
 
-func buildLog(debug bool) logrus.FieldLogger {
-	log := logrus.New()
-	if debug {
-		log.Level = logrus.DebugLevel
-	}
-	log.WithField("level", log.Level).Debug("using log level")
-	return log
-}
-
 func runSignalHandler(cancel context.CancelFunc) {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
@@ -210,4 +230,15 @@ func runSignalHandler(cancel context.CancelFunc) {
 			os.Exit(0)
 		}
 	}
+}
+*/
+
+func buildLog(debug bool) logrus.FieldLogger {
+	log := logrus.New()
+	log.Out = defaultLogOut
+	if debug {
+		log.Level = logrus.DebugLevel
+	}
+	log.WithField("level", log.Level).Debug("using log level")
+	return log
 }

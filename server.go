@@ -1,10 +1,12 @@
 package cyclist
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
@@ -17,6 +19,7 @@ import (
 var (
 	errUnauthorized = errors.New("unauthorized")
 	errForbidden    = errors.New("forbidden")
+	errNoInstanceID = errors.New("no instance id found")
 )
 
 type server struct {
@@ -27,6 +30,7 @@ type server struct {
 	log    logrus.FieldLogger
 	asSvc  autoscalingiface.AutoScalingAPI
 	snsSvc snsiface.SNSAPI
+	tokGen tokenGenerator
 	router *mux.Router
 
 	snsVerify bool
@@ -61,19 +65,23 @@ func (srv *server) Serve() error {
 
 func (srv *server) setupRouter() {
 	srv.router = mux.NewRouter()
-	srv.router.HandleFunc(`/sns`, newSnsHandlerFunc(srv.db, srv.log, srv.snsSvc, srv.snsVerify)).Methods("POST")
+	srv.router.HandleFunc(`/sns`,
+		newSNSHandlerFunc(srv.db, srv.log, srv.snsSvc, srv.snsVerify, srv.tokGen)).Methods("POST")
 
-	srv.router.HandleFunc(`/heartbeats/{instance_id}`,
-		newHeartbeatHandlerFunc(srv.db, srv.log)).Methods("GET")
+	srv.router.Handle(`/tokens/{instance_id}`,
+		srv.authd(newTokensHandlerFunc(srv.db, srv.log))).Methods("GET")
+
+	srv.router.Handle(`/heartbeats/{instance_id}`,
+		srv.instAuthd(newHeartbeatHandlerFunc(srv.db, srv.log))).Methods("GET")
 
 	srv.router.Handle(`/launches/{instance_id}`,
-		srv.authd(newLifecycleHandlerFunc("launch", srv.db, srv.log, srv.asSvc))).Methods("POST")
+		srv.instAuthd(newLifecycleHandlerFunc("launch", srv.db, srv.log, srv.asSvc))).Methods("POST")
 
 	srv.router.Handle(`/terminations/{instance_id}`,
-		srv.authd(newLifecycleHandlerFunc("termination", srv.db, srv.log, srv.asSvc))).Methods("POST")
+		srv.instAuthd(newLifecycleHandlerFunc("termination", srv.db, srv.log, srv.asSvc))).Methods("POST")
 
 	srv.router.Handle(`/events/{instance_id}`,
-		newLifecycleEventsHandlerFunc(srv.db, srv.log)).Methods("GET")
+		srv.instAuthd(newLifecycleEventsHandlerFunc(srv.db, srv.log))).Methods("GET")
 
 	srv.router.HandleFunc(`/`, srv.ohai).Methods("GET", "HEAD")
 }
@@ -83,7 +91,7 @@ func (srv *server) authd(f http.HandlerFunc) http.Handler {
 }
 
 func (srv *server) requireAuth(w http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
-	authHeader := req.Header.Get("Authorization")
+	authHeader := strings.TrimSpace(req.Header.Get("Authorization"))
 	if authHeader == "" {
 		w.Header().Set("WWW-Authenticate", "token")
 		jsonRespond(w, http.StatusUnauthorized, &jsonErr{Err: errUnauthorized})
@@ -91,13 +99,51 @@ func (srv *server) requireAuth(w http.ResponseWriter, req *http.Request, next ht
 	}
 
 	for _, tok := range srv.authTokens {
-		if authHeader == fmt.Sprintf("token %s", tok) {
+		if subtle.ConstantTimeCompare([]byte(authHeader), []byte(fmt.Sprintf("token %s", tok))) == 1 {
 			next(w, req)
 			return
 		}
 	}
 
 	jsonRespond(w, http.StatusForbidden, &jsonErr{Err: errForbidden})
+}
+
+func (srv *server) instAuthd(f http.HandlerFunc) http.Handler {
+	return negroni.New(negroni.HandlerFunc(srv.requireInstAuth), negroni.Wrap(http.HandlerFunc(f)))
+}
+
+func (srv *server) requireInstAuth(w http.ResponseWriter, req *http.Request, next http.HandlerFunc) {
+	authHeader := strings.TrimSpace(req.Header.Get("Authorization"))
+	if authHeader == "" {
+		w.Header().Set("WWW-Authenticate", "token")
+		jsonRespond(w, http.StatusUnauthorized, &jsonErr{Err: errUnauthorized})
+		return
+	}
+
+	instanceID, ok := mux.Vars(req)["instance_id"]
+	if !ok {
+		jsonRespond(w, http.StatusBadRequest, &jsonErr{Err: errNoInstanceID})
+		return
+	}
+
+	instTok, err := srv.db.fetchInstanceToken(instanceID)
+	if err != nil {
+		jsonRespond(w, http.StatusForbidden, &jsonErr{Err: errForbidden})
+		return
+	}
+
+	if subtle.ConstantTimeCompare([]byte(authHeader), []byte(fmt.Sprintf("token %s", instTok))) == 1 {
+		next(w, req)
+		return
+	}
+
+	jsonRespond(w, http.StatusForbidden, &jsonErr{Err: errForbidden})
+}
+
+func txtRespond(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(status)
+	fmt.Fprintf(w, "%v", data)
 }
 
 func jsonRespond(w http.ResponseWriter, status int, data interface{}) {

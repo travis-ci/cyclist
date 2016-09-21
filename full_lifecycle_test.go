@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func TestFullLifecycleManagementHTTP(t *testing.T) {
 		command.Action = newFullLifecycleManagementHTTP(t).Run
 	}
 
-	app.Run([]string{"cyclist", "serve"})
+	app.Run([]string{"cyclist", "serve", "--port", "17321"})
 }
 
 type fullLifecycleManagementHTTP struct {
@@ -75,6 +76,7 @@ func (f *fullLifecycleManagementHTTP) Run(ctx *cli.Context) error {
 		{"SNS subscription confirmation", f.stepSubscriptionConfirmation},
 		{"SNS test notification", f.stepTestNotification},
 		{"SNS instance launching notification", f.stepInstanceLaunchingNotification},
+		{"get instance token", f.stepGetInstanceToken},
 		{"instance launching confirmation", f.stepInstanceLaunchingConfirmation},
 		{"heartbeat while up", f.stepHeartbeatWhileUp},
 		{"SNS instance terminating notification", f.stepInstanceTerminatingNotification},
@@ -92,11 +94,11 @@ func (f *fullLifecycleManagementHTTP) Run(ctx *cli.Context) error {
 	return nil
 }
 
-func (f *fullLifecycleManagementHTTP) authPost(path string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s%s", f.ts.URL, path), body)
+func (f *fullLifecycleManagementHTTP) authHTTP(method, path string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(method, fmt.Sprintf("%s%s", f.ts.URL, path), body)
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, req)
-	req.Header.Set("Authorization", fmt.Sprintf("token %s", f.srv.authTokens[0]))
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", f.vars["instance_token"]))
 
 	client := &http.Client{}
 	return client.Do(req)
@@ -118,6 +120,8 @@ func (f *fullLifecycleManagementHTTP) stepInitServer(ctx *cli.Context) {
 	if os.Getenv("DEBUG") != "1" {
 		srv.log.(*logrus.Logger).Level = logrus.FatalLevel
 	}
+
+	srv.tokGen = newTestTokenGenerator()
 
 	f.srv = srv
 	f.db = srv.db
@@ -222,9 +226,37 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingNotification() {
 	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "up", state)
+}
 
-	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+func (f *fullLifecycleManagementHTTP) stepGetInstanceToken() {
+	_, err := f.db.fetchInstanceToken(f.vars["instance_id"])
+	assert.NotNil(f.t, err)
+
+	_, err = f.db.fetchTempInstanceToken(f.vars["instance_id"])
 	assert.Nil(f.t, err)
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/tokens/%s", f.ts.URL, f.vars["instance_id"]), nil)
+	assert.Nil(f.t, err)
+	assert.NotNil(f.t, req)
+	req.Header.Set("Accept", "text/plain, application/json, */*")
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", f.srv.authTokens[0]))
+	client := &http.Client{}
+	res, err := client.Do(req)
+	assert.Nil(f.t, err)
+	assert.NotNil(f.t, res)
+	assert.Equal(f.t, 200, res.StatusCode)
+	assert.Regexp(f.t, "\\btext\\b", res.Header.Get("Content-Type"))
+
+	body, err := ioutil.ReadAll(res.Body)
+	assert.Nil(f.t, err)
+	tok := strings.TrimSpace(string(body))
+	assert.Len(f.t, tok, 36)
+
+	f.vars["instance_token"] = tok
+
+	res, err = f.authHTTP("GET", fmt.Sprintf("/events/%s", f.vars["instance_id"]), nil)
+	assert.Nil(f.t, err)
+	assert.Equal(f.t, 200, res.StatusCode)
 
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)
@@ -233,7 +265,7 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingNotification() {
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
-	res, err := f.authPost(fmt.Sprintf("/launches/%s", f.vars["instance_id"]), &bytes.Buffer{})
+	res, err := f.authHTTP("POST", fmt.Sprintf("/launches/%s", f.vars["instance_id"]), &bytes.Buffer{})
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
 
@@ -243,16 +275,18 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
 	assert.Equal(f.t, 200, res.StatusCode)
 
 	la, err := f.db.fetchInstanceLifecycleAction("launching", f.vars["instance_id"])
-	assert.Nil(f.t, la)
-	assert.NotNil(f.t, err)
+	assert.NotNil(f.t, la)
+	assert.Nil(f.t, err)
+	assert.True(f.t, la.Completed)
 
 	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "up", state)
 	assert.Equal(f.t, "completed", f.vars["instance_launching_state"])
 
-	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+	res, err = f.authHTTP("GET", fmt.Sprintf("/events/%s", f.vars["instance_id"]), nil)
 	assert.Nil(f.t, err)
+	assert.Equal(f.t, 200, res.StatusCode)
 
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)
@@ -261,7 +295,7 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
 }
 
 func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileUp() {
-	res, err := http.Get(fmt.Sprintf("%s/heartbeats/%s", f.ts.URL, f.vars["instance_id"]))
+	res, err := f.authHTTP("GET", fmt.Sprintf("/heartbeats/%s", f.vars["instance_id"]), nil)
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
 
@@ -274,8 +308,9 @@ func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileUp() {
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "up", state)
 
-	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+	res, err = f.authHTTP("GET", fmt.Sprintf("/events/%s", f.vars["instance_id"]), nil)
 	assert.Nil(f.t, err)
+	assert.Equal(f.t, 200, res.StatusCode)
 
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)
@@ -319,8 +354,9 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingNotification() {
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "down", state)
 
-	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+	res, err = f.authHTTP("GET", fmt.Sprintf("/events/%s", f.vars["instance_id"]), nil)
 	assert.Nil(f.t, err)
+	assert.Equal(f.t, 200, res.StatusCode)
 
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)
@@ -329,7 +365,7 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingNotification() {
 }
 
 func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileDown() {
-	res, err := http.Get(fmt.Sprintf("%s/heartbeats/%s", f.ts.URL, f.vars["instance_id"]))
+	res, err := f.authHTTP("GET", fmt.Sprintf("/heartbeats/%s", f.vars["instance_id"]), nil)
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
 
@@ -342,8 +378,9 @@ func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileDown() {
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, "down", state)
 
-	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+	res, err = f.authHTTP("GET", fmt.Sprintf("/events/%s", f.vars["instance_id"]), nil)
 	assert.Nil(f.t, err)
+	assert.Equal(f.t, 200, res.StatusCode)
 
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)
@@ -352,7 +389,7 @@ func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileDown() {
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
-	res, err := f.authPost(fmt.Sprintf("/terminations/%s", f.vars["instance_id"]), &bytes.Buffer{})
+	res, err := f.authHTTP("POST", fmt.Sprintf("/terminations/%s", f.vars["instance_id"]), &bytes.Buffer{})
 	assert.Nil(f.t, err)
 	assert.NotNil(f.t, res)
 
@@ -362,8 +399,9 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
 	assert.Equal(f.t, 200, res.StatusCode)
 
 	la, err := f.db.fetchInstanceLifecycleAction("terminating", f.vars["instance_id"])
-	assert.Nil(f.t, la)
-	assert.NotNil(f.t, err)
+	assert.NotNil(f.t, la)
+	assert.Nil(f.t, err)
+	assert.True(f.t, la.Completed)
 
 	state, err := f.db.fetchInstanceState(f.vars["instance_id"])
 	assert.NotNil(f.t, err)
@@ -371,10 +409,11 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
 	assert.Equal(f.t, "completed", f.vars["instance_terminating_state"])
 
 	assert.Len(f.t, f.db.(*testRepo).s, 0)
-	assert.Len(f.t, f.db.(*testRepo).la, 0)
+	assert.Len(f.t, f.db.(*testRepo).la, 2)
 
-	res, err = http.Get(fmt.Sprintf("%s/events/%s", f.ts.URL, f.vars["instance_id"]))
+	res, err = f.authHTTP("GET", fmt.Sprintf("/events/%s", f.vars["instance_id"]), nil)
 	assert.Nil(f.t, err)
+	assert.Equal(f.t, 200, res.StatusCode)
 
 	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
 	err = json.NewDecoder(res.Body).Decode(evs)

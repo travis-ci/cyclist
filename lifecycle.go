@@ -12,13 +12,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var (
-	transitionHandlers = map[string]func(repo, string) error{
-		"launching":   handleLaunchingLifecycleTransition,
-		"terminating": handleTerminatingLifecycleTransition,
-	}
-)
-
 func handleLaunchingLifecycleTransition(db repo, instanceID string) error {
 	err := db.setInstanceState(instanceID, "up")
 	if err != nil {
@@ -39,6 +32,12 @@ func handleTerminatingLifecycleTransition(db repo, instanceID string) error {
 
 func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 	asSvc autoscalingiface.AutoScalingAPI, transition, instanceID string) error {
+
+	log = log.WithFields(logrus.Fields{
+		"instance":   instanceID,
+		"transition": transition,
+	})
+
 	action, err := db.fetchInstanceLifecycleAction(transition, instanceID)
 	if err != nil {
 		return err
@@ -47,6 +46,11 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 	if action == nil {
 		return fmt.Errorf("no lifecycle transition '%s' for instance '%s'",
 			transition, instanceID)
+	}
+
+	if action.Completed {
+		log.Info("already completed")
+		return nil
 	}
 
 	input := &autoscaling.CompleteLifecycleActionInput{
@@ -61,16 +65,21 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 		return err
 	}
 
-	err = db.wipeInstanceLifecycleAction(transition, instanceID)
+	err = db.completeInstanceLifecycleAction(transition, instanceID)
 	if err != nil {
-		log.WithField("err", err).Warn("failed to clean up lifecycle action bits")
+		log.WithField("err", err).Warn("failed to set lifecycle action bits")
 	}
 
-	if transitionHandler, ok := transitionHandlers[transition]; ok {
-		return transitionHandler(db, instanceID)
+	switch transition {
+	case "launching":
+		log.Info("sending to transition handler")
+		return handleLaunchingLifecycleTransition(db, instanceID)
+	case "terminating":
+		log.Info("sending to transition handler")
+		return handleTerminatingLifecycleTransition(db, instanceID)
+	default:
+		return fmt.Errorf("unknown lifecycle transition '%s'", transition)
 	}
-
-	return fmt.Errorf("unknown lifecycle transition '%s'", transition)
 }
 
 func newLifecycleHandlerFunc(transition string, db repo,

@@ -21,6 +21,7 @@ func newTestServer() *server {
 		log:    shushLog,
 		asSvc:  newTestAutosScalingService(nil),
 		snsSvc: newTestSNSService(nil),
+		tokGen: newTestTokenGenerator(),
 
 		snsVerify: false,
 	}
@@ -52,7 +53,7 @@ func TestServer_POST_sns_Confirmation(t *testing.T) {
 
 	assert.Equal(t, 200, res.StatusCode)
 	assert.Contains(t, body, "message")
-	assert.Equal(t, "subscription confirmed", body["message"])
+	assert.Equal(t, "handled 'SubscriptionConfirmation' message", body["message"])
 }
 
 func TestServer_POST_sns_Notification_UnknownLifecycleTransition(t *testing.T) {
@@ -118,7 +119,7 @@ func TestServer_POST_sns_Notification_TestEvent(t *testing.T) {
 
 	assert.Equal(t, 202, res.StatusCode)
 	assert.Contains(t, body, "message")
-	assert.Equal(t, "notification handled", body["message"])
+	assert.Equal(t, "handled 'Notification' message", body["message"])
 }
 
 func TestServer_POST_sns_Notification_InstanceLaunchingLifecycleTransition(t *testing.T) {
@@ -190,11 +191,15 @@ func TestServer_POST_sns_Notification_InstanceTerminatingLifecycleTransition(t *
 
 func TestServer_GET_heartbeats(t *testing.T) {
 	srv := newTestServer()
+	token := "surprisingly-guessable"
+	_ = srv.db.storeInstanceToken("i-fafafaf", token)
 	_ = srv.db.setInstanceState("i-fafafaf", "up")
 	ts := httptest.NewServer(srv.router)
 	defer ts.Close()
 
-	res, err := http.Get(fmt.Sprintf("%s/heartbeats/i-fafafaf", ts.URL))
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/heartbeats/i-fafafaf", ts.URL), nil)
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
+	res, err := (&http.Client{}).Do(req)
 	assert.Nil(t, err)
 
 	body := map[string]interface{}{}
@@ -208,6 +213,8 @@ func TestServer_GET_heartbeats(t *testing.T) {
 
 func TestServer_POST_launches(t *testing.T) {
 	srv := newTestServer()
+	token := "surprisingly-guessable"
+	_ = srv.db.storeInstanceToken("i-fafafaf", token)
 	ts := httptest.NewServer(srv.router)
 	defer ts.Close()
 
@@ -223,7 +230,7 @@ func TestServer_POST_launches(t *testing.T) {
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/launches/i-fafafaf", ts.URL), &bytes.Buffer{})
 	assert.Nil(t, err)
 	assert.NotNil(t, req)
-	req.Header.Set("Authorization", "token mysteriously")
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
 
 	res, err := (&http.Client{}).Do(req)
 	assert.Nil(t, err)
