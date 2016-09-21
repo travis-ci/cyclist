@@ -37,7 +37,11 @@ type server struct {
 }
 
 func (srv *server) ohai(w http.ResponseWriter, req *http.Request) {
-	jsonRespond(w, http.StatusOK, &jsonMsg{Message: "ohai™"})
+	jsonRespond(w, http.StatusOK, &jsonMsg{Message: "🚴™"})
+}
+
+func (srv *server) meta(w http.ResponseWriter, req *http.Request) {
+	jsonRespond(w, http.StatusOK, cyclistMetadata)
 }
 
 func (srv *server) Serve() error {
@@ -84,6 +88,7 @@ func (srv *server) setupRouter() {
 		srv.instAuthd(newLifecycleEventsHandlerFunc(srv.db, srv.log))).Methods("GET")
 
 	srv.router.HandleFunc(`/`, srv.ohai).Methods("GET", "HEAD")
+	srv.router.HandleFunc(`/__meta__`, srv.meta).Methods("GET", "HEAD")
 }
 
 func (srv *server) authd(f http.HandlerFunc) http.Handler {

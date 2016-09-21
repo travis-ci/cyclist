@@ -313,3 +313,43 @@ func TestServer_POST_launches_WithInvalidAuthorization(t *testing.T) {
 	assert.Contains(t, body, "error")
 	assert.Equal(t, "forbidden", body["error"])
 }
+
+func TestServer_GET_ohai(t *testing.T) {
+	srv := newTestServer()
+	ts := httptest.NewServer(srv.router)
+	defer ts.Close()
+
+	res, err := http.Get(ts.URL)
+	assert.Nil(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, 200, res.StatusCode)
+
+	body := map[string]string{}
+	err = json.NewDecoder(res.Body).Decode(&body)
+	assert.Nil(t, err)
+	assert.Contains(t, body, "message")
+	assert.Equal(t, "🚴™", body["message"])
+}
+
+func TestServer_GET_meta(t *testing.T) {
+	srv := newTestServer()
+	ts := httptest.NewServer(srv.router)
+	defer ts.Close()
+
+	res, err := http.Get(fmt.Sprintf("%s/__meta__", ts.URL))
+	assert.Nil(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, 200, res.StatusCode)
+
+	body := map[string]string{}
+	err = json.NewDecoder(res.Body).Decode(&body)
+	assert.Nil(t, err)
+	for _, key := range []string{
+		"version",
+		"revision",
+		"revision_url",
+		"generated",
+	} {
+		assert.Contains(t, body, key)
+	}
+}
