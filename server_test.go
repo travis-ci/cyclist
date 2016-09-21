@@ -328,7 +328,7 @@ func TestServer_GET_ohai(t *testing.T) {
 	err = json.NewDecoder(res.Body).Decode(&body)
 	assert.Nil(t, err)
 	assert.Contains(t, body, "message")
-	assert.Equal(t, "ohai™", body["message"])
+	assert.Equal(t, "🚴™", body["message"])
 }
 
 func TestServer_GET_meta(t *testing.T) {

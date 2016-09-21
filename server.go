@@ -37,7 +37,7 @@ type server struct {
 }
 
 func (srv *server) ohai(w http.ResponseWriter, req *http.Request) {
-	jsonRespond(w, http.StatusOK, &jsonMsg{Message: "ohai™"})
+	jsonRespond(w, http.StatusOK, &jsonMsg{Message: "🚴™"})
 }
 
 func (srv *server) meta(w http.ResponseWriter, req *http.Request) {
