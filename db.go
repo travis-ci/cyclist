@@ -204,21 +204,9 @@ func (rr *redisRepo) completeInstanceLifecycleAction(transition, instanceID stri
 	conn := rr.cg.Get()
 	defer rr.closeConn(conn)
 
-	err := conn.Send("MULTI")
-	if err != nil {
-		return err
-	}
-
-	err = conn.Send("HSET",
+	_, err := conn.Do("HSET",
 		fmt.Sprintf("%s:instance_%s:%s", RedisNamespace, transition, instanceID),
 		"completed", true)
-
-	if err != nil {
-		conn.Do("DISCARD")
-		return err
-	}
-
-	_, err = conn.Do("EXEC")
 	return err
 }
 

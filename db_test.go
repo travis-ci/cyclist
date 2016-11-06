@@ -262,9 +262,7 @@ func TestRedisRepo_completeInstanceLifecycleAction(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
-	conn.Command("MULTI").Expect("OK!")
 	conn.Command("HSET", "cyclist:instance_fuming:i-fafafaf", "completed", true).Expect("OK!")
-	conn.Command("EXEC").Expect("OK!")
 
 	err := rr.completeInstanceLifecycleAction("fuming", "i-fafafaf")
 	assert.Nil(t, err)
@@ -278,41 +276,15 @@ func TestRedisRepo_completeInstanceLifecycleAction_WithEmptyInstanceID(t *testin
 	assert.Equal(t, errEmptyInstanceID, err)
 }
 
-func TestRedisRepo_completeInstanceLifecycleAction_WithFailedMulti(t *testing.T) {
-	rr := &redisRepo{cg: &testRedisConnGetter{}}
-
-	conn := rr.cg.Get().(*redigomock.Conn)
-	conn.Command("MULTI").ExpectError(errors.New("multi-nope"))
-
-	err := rr.completeInstanceLifecycleAction("fuming", "i-fafafaf")
-	assert.NotNil(t, err)
-	assert.Equal(t, "multi-nope", err.Error())
-}
-
 func TestRedisRepo_completeInstanceLifecycleAction_WithFailedDel(t *testing.T) {
 	rr := &redisRepo{cg: &testRedisConnGetter{}}
 
 	conn := rr.cg.Get().(*redigomock.Conn)
-	conn.Command("MULTI").Expect("OK!")
 	conn.Command("HSET", "cyclist:instance_fuming:i-fafafaf", "completed", true).ExpectError(errors.New("control alt"))
-	conn.Command("DISCARD").Expect("OK!")
 
 	err := rr.completeInstanceLifecycleAction("fuming", "i-fafafaf")
 	assert.NotNil(t, err)
 	assert.Equal(t, "control alt", err.Error())
-}
-
-func TestRedisRepo_completeInstanceLifecycleAction_WithFailedExec(t *testing.T) {
-	rr := &redisRepo{cg: &testRedisConnGetter{}}
-
-	conn := rr.cg.Get().(*redigomock.Conn)
-	conn.Command("MULTI").Expect("OK!")
-	conn.Command("HSET", "cyclist:instance_fuming:i-fafafaf", "completed", true).Expect("OK!")
-	conn.Command("EXEC").ExpectError(errors.New("def not exectly"))
-
-	err := rr.completeInstanceLifecycleAction("fuming", "i-fafafaf")
-	assert.NotNil(t, err)
-	assert.Equal(t, "def not exectly", err.Error())
 }
 
 func TestRedisRepo_storeInstanceToken(t *testing.T) {
