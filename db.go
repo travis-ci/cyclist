@@ -28,6 +28,7 @@ type repo interface {
 
 	storeInstanceEvent(instanceID, event string) error
 	fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, error)
+	fetchAllInstanceEvents() (map[string][]*lifecycleEvent, error)
 
 	storeInstanceLifecycleAction(la *lifecycleAction) error
 	fetchInstanceLifecycleAction(transition, instanceID string) (*lifecycleAction, error)
@@ -98,12 +99,16 @@ func (rr *redisRepo) storeInstanceEvent(instanceID, event string) error {
 }
 
 func (rr *redisRepo) fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, error) {
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	return rr.fetchInstanceEventsWithConn(conn, instanceID)
+}
+
+func (rr *redisRepo) fetchInstanceEventsWithConn(conn redis.Conn, instanceID string) ([]*lifecycleEvent, error) {
 	if strings.TrimSpace(instanceID) == "" {
 		return nil, errEmptyInstanceID
 	}
-
-	conn := rr.cg.Get()
-	defer rr.closeConn(conn)
 
 	raw, err := redis.StringMap(conn.Do("HGETALL", fmt.Sprintf("%s:instance:%s:events", RedisNamespace, instanceID)))
 	if err != nil {
@@ -129,6 +134,34 @@ func (rr *redisRepo) fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, 
 	}
 
 	return events, nil
+}
+
+func (rr *redisRepo) fetchAllInstanceEvents() (map[string][]*lifecycleEvent, error) {
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	instanceEventKeys, err := redis.Strings(conn.Do("KEYS", fmt.Sprintf("%s:instance:*:events", RedisNamespace)))
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string][]*lifecycleEvent{}
+	for _, key := range instanceEventKeys {
+		keyParts := strings.Split(key, ":")
+		if len(keyParts) != 4 {
+			return nil, fmt.Errorf("invalid events key %q", key)
+		}
+
+		instanceID := keyParts[2]
+		events, err := rr.fetchInstanceEventsWithConn(conn, instanceID)
+		if err != nil {
+			return nil, err
+		}
+
+		res[instanceID] = events
+	}
+
+	return res, nil
 }
 
 func (rr *redisRepo) storeInstanceLifecycleAction(a *lifecycleAction) error {

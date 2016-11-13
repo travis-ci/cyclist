@@ -131,15 +131,41 @@ func newLifecycleEventsHandlerFunc(db repo, log logrus.FieldLogger) http.Handler
 		}
 
 		jsonRespond(w, http.StatusOK, &jsonLifecycleEvents{
-			Data: events,
-			Meta: map[string]string{
-				"instance_id": instanceID,
-			},
+			Events:     events,
+			InstanceID: instanceID,
+		})
+	}
+}
+
+func newAllLifecycleEventsHandlerFunc(db repo, log logrus.FieldLogger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log = log.WithFields(logrus.Fields{
+			"path":   r.URL.Path,
+			"method": r.Method,
+		})
+
+		events, err := db.fetchAllInstanceEvents()
+		if err != nil {
+			log.WithField("err", err).Error("fetching all lifecycle events failed")
+			jsonRespond(w, http.StatusBadRequest, &jsonErr{
+				Err: errors.Wrap(err, "fetching all lifecycle events failed"),
+			})
+			return
+		}
+
+		jsonRespond(w, http.StatusOK, &jsonAllLifecycleEvents{
+			Events: events,
+			Total:  len(events),
 		})
 	}
 }
 
 type jsonLifecycleEvents struct {
-	Data []*lifecycleEvent `json:"data"`
-	Meta map[string]string `json:"meta"`
+	Events     []*lifecycleEvent `json:"events"`
+	InstanceID string            `json:"@instance_id"`
+}
+
+type jsonAllLifecycleEvents struct {
+	Events map[string][]*lifecycleEvent `json:"events"`
+	Total  int                          `json:"@total"`
 }

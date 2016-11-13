@@ -258,10 +258,10 @@ func (f *fullLifecycleManagementHTTP) stepGetInstanceToken() {
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	evs := &jsonLifecycleEvents{}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 1)
+	assert.Len(f.t, evs.Events, 1)
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
@@ -288,10 +288,10 @@ func (f *fullLifecycleManagementHTTP) stepInstanceLaunchingConfirmation() {
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	evs := &jsonLifecycleEvents{}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 2)
+	assert.Len(f.t, evs.Events, 2)
 }
 
 func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileUp() {
@@ -312,10 +312,10 @@ func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileUp() {
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	evs := &jsonLifecycleEvents{}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 3)
+	assert.Len(f.t, evs.Events, 3)
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingNotification() {
@@ -358,10 +358,10 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingNotification() {
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	evs := &jsonLifecycleEvents{}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 4)
+	assert.Len(f.t, evs.Events, 4)
 }
 
 func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileDown() {
@@ -382,10 +382,10 @@ func (f *fullLifecycleManagementHTTP) stepHeartbeatWhileDown() {
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	evs := &jsonLifecycleEvents{}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 4)
+	assert.Len(f.t, evs.Events, 4)
 }
 
 func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
@@ -415,10 +415,10 @@ func (f *fullLifecycleManagementHTTP) stepInstanceTerminatingConfirmation() {
 	assert.Nil(f.t, err)
 	assert.Equal(f.t, 200, res.StatusCode)
 
-	evs := &jsonLifecycleEvents{Meta: map[string]string{}}
+	evs := &jsonLifecycleEvents{}
 	err = json.NewDecoder(res.Body).Decode(evs)
 	assert.Nil(f.t, err)
-	assert.Len(f.t, evs.Data, 5)
+	assert.Len(f.t, evs.Events, 5)
 }
 
 func TestFullLifecycleManagementSQS(t *testing.T) {
