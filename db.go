@@ -3,8 +3,8 @@ package cyclist
 import (
 	"errors"
 	"fmt"
-	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -141,8 +141,7 @@ func (rr *redisRepo) fetchAllInstanceEvents() (map[string][]*lifecycleEvent, err
 	conn := rr.cg.Get()
 	defer rr.closeConn(conn)
 
-	// instanceEventKeys, err := rr.scanKeysPattern(fmt.Sprintf("%s:instance:*:events", RedisNamespace))
-	instanceEventKeys, err := redis.Strings(conn.Do("KEYS", fmt.Sprintf("%s:instance:*:events", RedisNamespace)))
+	instanceEventKeys, err := rr.scanKeysPattern(fmt.Sprintf("%s:instance:*:events", RedisNamespace))
 	if err != nil {
 		return nil, err
 	}
@@ -171,9 +170,10 @@ func (rr *redisRepo) scanKeysPattern(pattern string) ([]string, error) {
 	defer rr.closeConn(conn)
 
 	fullResults := []string{}
-	keys := []interface{}{}
-	cursorSlice := []uint8{}
-	cursor := uint8(0)
+	keysSlice := []interface{}{}
+	cursorSlice := []byte{}
+	cursor := uint64(0)
+	keyBytes := []byte{}
 	ok := false
 
 	for {
@@ -182,41 +182,41 @@ func (rr *redisRepo) scanKeysPattern(pattern string) ([]string, error) {
 			return fullResults, err
 		}
 
-		fmt.Fprintf(os.Stderr, "raw SCAN reply: %#v\n", raw)
-
 		if len(raw) < 2 {
-			return fullResults, fmt.Errorf("unexpected SCAN result length %d", len(raw))
+			return fullResults, fmt.Errorf("unexpected scan result length=%d", len(raw))
 		}
 
-		cursorSlice, ok = raw[0].([]uint8)
+		cursorSlice, ok = raw[0].([]byte)
 		if !ok {
-			return fullResults, fmt.Errorf("first SCAN result was not []uint8 but %T", raw[0])
+			return fullResults, fmt.Errorf("scan cursor was not []byte but %T", raw[0])
 		}
 
 		if len(cursorSlice) == 0 {
-			return fullResults, fmt.Errorf("first SCAN result was empty")
+			return fullResults, fmt.Errorf("scan cursor is empty")
 		}
 
-		cursor = cursorSlice[0]
+		cursor, err = strconv.ParseUint(string(cursorSlice), 10, 0)
+		if err != nil {
+			return fullResults, err
+		}
 
-		fmt.Fprintf(os.Stderr, "setting cursor=%v\n", cursor)
-
-		keys, ok = raw[1].([]interface{})
+		keysSlice, ok = raw[1].([]interface{})
 		if !ok {
-			return fullResults, fmt.Errorf("second SCAN result was not []interface{} but %T", raw[1])
+			return fullResults, fmt.Errorf("scan results not []interface{} but %T", raw[1])
 		}
 
-		fmt.Fprintf(os.Stderr, "keys=%#v\n", keys)
+		for _, b := range keysSlice {
+			keyBytes, ok = b.([]byte)
+			if !ok {
+				return fullResults, fmt.Errorf("scan results contain non-string key %T", b)
+			}
 
-		for _, key := range keys {
-			fullResults = append(fullResults, fmt.Sprintf("%s", key))
+			fullResults = append(fullResults, string(keyBytes))
 		}
 
 		if cursor == 0 {
 			return fullResults, nil
 		}
-
-		ok = false
 	}
 }
 
