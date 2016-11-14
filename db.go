@@ -3,6 +3,7 @@ package cyclist
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -140,6 +141,7 @@ func (rr *redisRepo) fetchAllInstanceEvents() (map[string][]*lifecycleEvent, err
 	conn := rr.cg.Get()
 	defer rr.closeConn(conn)
 
+	// instanceEventKeys, err := rr.scanKeysPattern(fmt.Sprintf("%s:instance:*:events", RedisNamespace))
 	instanceEventKeys, err := redis.Strings(conn.Do("KEYS", fmt.Sprintf("%s:instance:*:events", RedisNamespace)))
 	if err != nil {
 		return nil, err
@@ -162,6 +164,60 @@ func (rr *redisRepo) fetchAllInstanceEvents() (map[string][]*lifecycleEvent, err
 	}
 
 	return res, nil
+}
+
+func (rr *redisRepo) scanKeysPattern(pattern string) ([]string, error) {
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	fullResults := []string{}
+	keys := []interface{}{}
+	cursorSlice := []uint8{}
+	cursor := uint8(0)
+	ok := false
+
+	for {
+		raw, err := redis.Values(conn.Do("SCAN", cursor, "MATCH", pattern))
+		if err != nil {
+			return fullResults, err
+		}
+
+		fmt.Fprintf(os.Stderr, "raw SCAN reply: %#v\n", raw)
+
+		if len(raw) < 2 {
+			return fullResults, fmt.Errorf("unexpected SCAN result length %d", len(raw))
+		}
+
+		cursorSlice, ok = raw[0].([]uint8)
+		if !ok {
+			return fullResults, fmt.Errorf("first SCAN result was not []uint8 but %T", raw[0])
+		}
+
+		if len(cursorSlice) == 0 {
+			return fullResults, fmt.Errorf("first SCAN result was empty")
+		}
+
+		cursor = cursorSlice[0]
+
+		fmt.Fprintf(os.Stderr, "setting cursor=%v\n", cursor)
+
+		keys, ok = raw[1].([]interface{})
+		if !ok {
+			return fullResults, fmt.Errorf("second SCAN result was not []interface{} but %T", raw[1])
+		}
+
+		fmt.Fprintf(os.Stderr, "keys=%#v\n", keys)
+
+		for _, key := range keys {
+			fullResults = append(fullResults, fmt.Sprintf("%s", key))
+		}
+
+		if cursor == 0 {
+			return fullResults, nil
+		}
+
+		ok = false
+	}
 }
 
 func (rr *redisRepo) storeInstanceLifecycleAction(a *lifecycleAction) error {
