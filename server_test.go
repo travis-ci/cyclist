@@ -314,6 +314,70 @@ func TestServer_POST_launches_WithInvalidAuthorization(t *testing.T) {
 	assert.Equal(t, "forbidden", body["error"])
 }
 
+func TestServer_GET_eventsForInstance(t *testing.T) {
+	srv := newTestServer()
+	token := "surprisingly-guessable"
+	_ = srv.db.storeInstanceToken("i-fafafaf", token)
+	ts := httptest.NewServer(srv.router)
+	defer ts.Close()
+
+	err := srv.db.storeInstanceEvent("i-fafafaf", "slurp")
+	assert.Nil(t, err)
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/events/i-fafafaf", ts.URL), &bytes.Buffer{})
+	assert.Nil(t, err)
+	assert.NotNil(t, req)
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", token))
+
+	res, err := (&http.Client{}).Do(req)
+	assert.Nil(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, 200, res.StatusCode)
+
+	bodyBytes, err := ioutil.ReadAll(res.Body)
+	assert.Nil(t, err)
+	body := &jsonLifecycleEvents{Events: []*lifecycleEvent{}}
+	err = json.Unmarshal(bodyBytes, &body)
+	assert.Nil(t, err)
+
+	assert.Len(t, body.Events, 1)
+	assert.Equal(t, "slurp", body.Events[0].Event)
+}
+
+func TestServer_GET_events(t *testing.T) {
+	srv := newTestServer()
+	ts := httptest.NewServer(srv.router)
+	defer ts.Close()
+
+	instanceIDs := []string{"i-fafafaf", "i-babadad", "i-bad1dea"}
+	for _, instanceID := range instanceIDs {
+		err := srv.db.storeInstanceEvent(instanceID, "slurp")
+		assert.Nil(t, err)
+	}
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/events", ts.URL), &bytes.Buffer{})
+	assert.Nil(t, err)
+	assert.NotNil(t, req)
+	req.Header.Set("Authorization", "token mysteriously")
+
+	res, err := (&http.Client{}).Do(req)
+	assert.Nil(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, 200, res.StatusCode)
+
+	bodyBytes, err := ioutil.ReadAll(res.Body)
+	assert.Nil(t, err)
+	body := &jsonAllLifecycleEvents{Events: map[string][]*lifecycleEvent{}}
+	err = json.Unmarshal(bodyBytes, &body)
+	assert.Nil(t, err)
+
+	assert.Len(t, body.Events, 3)
+	for _, events := range body.Events {
+		assert.Len(t, events, 1)
+		assert.Equal(t, "slurp", events[0].Event)
+	}
+}
+
 func TestServer_GET_ohai(t *testing.T) {
 	srv := newTestServer()
 	ts := httptest.NewServer(srv.router)

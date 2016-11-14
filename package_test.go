@@ -112,6 +112,19 @@ func (tr *testRepo) fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, e
 	return events, nil
 }
 
+func (tr *testRepo) fetchAllInstanceEvents() (map[string][]*lifecycleEvent, error) {
+	ret := map[string][]*lifecycleEvent{}
+
+	for instanceID, eventsMap := range tr.e {
+		ret[instanceID] = []*lifecycleEvent{}
+		for _, event := range eventsMap {
+			ret[instanceID] = append(ret[instanceID], event)
+		}
+	}
+
+	return ret, nil
+}
+
 func (tr *testRepo) storeInstanceLifecycleAction(la *lifecycleAction) error {
 	if la.LifecycleTransition == "" || la.EC2InstanceID == "" ||
 		la.LifecycleActionToken == "" || la.AutoScalingGroupName == "" ||

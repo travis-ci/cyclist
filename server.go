@@ -87,6 +87,9 @@ func (srv *server) setupRouter() {
 	srv.router.Handle(`/events/{instance_id}`,
 		srv.instAuthd(newLifecycleEventsHandlerFunc(srv.db, srv.log))).Methods("GET")
 
+	srv.router.Handle(`/events`,
+		srv.authd(newAllLifecycleEventsHandlerFunc(srv.db, srv.log))).Methods("GET")
+
 	srv.router.HandleFunc(`/`, srv.ohai).Methods("GET", "HEAD")
 	srv.router.HandleFunc(`/__meta__`, srv.meta).Methods("GET", "HEAD")
 }

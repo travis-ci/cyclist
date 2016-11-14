@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +29,7 @@ type repo interface {
 
 	storeInstanceEvent(instanceID, event string) error
 	fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, error)
+	fetchAllInstanceEvents() (map[string][]*lifecycleEvent, error)
 
 	storeInstanceLifecycleAction(la *lifecycleAction) error
 	fetchInstanceLifecycleAction(transition, instanceID string) (*lifecycleAction, error)
@@ -98,12 +100,16 @@ func (rr *redisRepo) storeInstanceEvent(instanceID, event string) error {
 }
 
 func (rr *redisRepo) fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, error) {
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	return rr.fetchInstanceEventsWithConn(conn, instanceID)
+}
+
+func (rr *redisRepo) fetchInstanceEventsWithConn(conn redis.Conn, instanceID string) ([]*lifecycleEvent, error) {
 	if strings.TrimSpace(instanceID) == "" {
 		return nil, errEmptyInstanceID
 	}
-
-	conn := rr.cg.Get()
-	defer rr.closeConn(conn)
 
 	raw, err := redis.StringMap(conn.Do("HGETALL", fmt.Sprintf("%s:instance:%s:events", RedisNamespace, instanceID)))
 	if err != nil {
@@ -129,6 +135,89 @@ func (rr *redisRepo) fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, 
 	}
 
 	return events, nil
+}
+
+func (rr *redisRepo) fetchAllInstanceEvents() (map[string][]*lifecycleEvent, error) {
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	instanceEventKeys, err := rr.scanKeysPattern(fmt.Sprintf("%s:instance:*:events", RedisNamespace))
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string][]*lifecycleEvent{}
+	for _, key := range instanceEventKeys {
+		keyParts := strings.Split(key, ":")
+		if len(keyParts) != 4 {
+			return nil, fmt.Errorf("invalid events key %q", key)
+		}
+
+		instanceID := keyParts[2]
+		events, err := rr.fetchInstanceEventsWithConn(conn, instanceID)
+		if err != nil {
+			return nil, err
+		}
+
+		res[instanceID] = events
+	}
+
+	return res, nil
+}
+
+func (rr *redisRepo) scanKeysPattern(pattern string) ([]string, error) {
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	fullResults := []string{}
+	keysSlice := []interface{}{}
+	cursorSlice := []byte{}
+	cursor := uint64(0)
+	keyBytes := []byte{}
+	ok := false
+
+	for {
+		raw, err := redis.Values(conn.Do("SCAN", cursor, "MATCH", pattern))
+		if err != nil {
+			return fullResults, err
+		}
+
+		if len(raw) < 2 {
+			return fullResults, fmt.Errorf("unexpected scan result length=%d", len(raw))
+		}
+
+		cursorSlice, ok = raw[0].([]byte)
+		if !ok {
+			return fullResults, fmt.Errorf("scan cursor was not []byte but %T", raw[0])
+		}
+
+		if len(cursorSlice) == 0 {
+			return fullResults, fmt.Errorf("scan cursor is empty")
+		}
+
+		cursor, err = strconv.ParseUint(string(cursorSlice), 10, 0)
+		if err != nil {
+			return fullResults, err
+		}
+
+		keysSlice, ok = raw[1].([]interface{})
+		if !ok {
+			return fullResults, fmt.Errorf("scan results not []interface{} but %T", raw[1])
+		}
+
+		for _, b := range keysSlice {
+			keyBytes, ok = b.([]byte)
+			if !ok {
+				return fullResults, fmt.Errorf("scan results contain non-string key %T", b)
+			}
+
+			fullResults = append(fullResults, string(keyBytes))
+		}
+
+		if cursor == 0 {
+			return fullResults, nil
+		}
+	}
 }
 
 func (rr *redisRepo) storeInstanceLifecycleAction(a *lifecycleAction) error {
