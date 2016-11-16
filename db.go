@@ -364,7 +364,7 @@ func (rr *redisRepo) fetchInstanceTokenfTTL(fmtString, instanceID string, ttl ui
 
 func (rr *redisRepo) closeConn(conn redis.Conn) {
 	err := conn.Close()
-	if err != nil {
+	if err != nil && rr.log != nil {
 		rr.log.WithField("err", err).Error("failed to close redis conn")
 	}
 }

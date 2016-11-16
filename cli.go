@@ -140,15 +140,7 @@ func runServe(ctx *cli.Context) error {
 
 func runSetDown(ctx *cli.Context) error {
 	log := buildLog(ctx.Bool("debug"))
-	db := &redisRepo{
-		cg:  buildRedisPool(ctx.String("redis-url")),
-		log: log,
-
-		instEventTTL:           uint(ctx.Duration("event-ttl").Seconds()),
-		instLifecycleActionTTL: uint(ctx.Duration("lifecycle-action-ttl").Seconds()),
-		instTempTokTTL:         uint(ctx.Duration("temp-token-ttl").Seconds()),
-		instTokTTL:             uint(ctx.Duration("token-ttl").Seconds()),
-	}
+	db := setupDbFromCtxAndLog(ctx, log)
 
 	for _, instanceID := range ctx.StringSlice("instances") {
 		err := db.setInstanceState(instanceID, "down")
@@ -171,15 +163,7 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 	}
 
 	log := buildLog(ctx.Bool("debug"))
-	db := &redisRepo{
-		cg:  buildRedisPool(ctx.String("redis-url")),
-		log: log,
-
-		instEventTTL:           uint(ctx.Duration("event-ttl").Seconds()),
-		instLifecycleActionTTL: uint(ctx.Duration("lifecycle-action-ttl").Seconds()),
-		instTempTokTTL:         uint(ctx.Duration("temp-token-ttl").Seconds()),
-		instTokTTL:             uint(ctx.Duration("token-ttl").Seconds()),
-	}
+	db := setupDbFromCtxAndLog(ctx, log)
 
 	snsSvc := sns.New(session.New(), &aws.Config{
 		Region: aws.String(ctx.String("aws-region")),
@@ -205,6 +189,18 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 
 		snsVerify: true,
 	}, nil
+}
+
+func setupDbFromCtxAndLog(ctx *cli.Context, log logrus.FieldLogger) repo {
+	return &redisRepo{
+		cg:  buildRedisPool(ctx.String("redis-url")),
+		log: log,
+
+		instEventTTL:           uint(ctx.Duration("event-ttl").Seconds()),
+		instLifecycleActionTTL: uint(ctx.Duration("lifecycle-action-ttl").Seconds()),
+		instTempTokTTL:         uint(ctx.Duration("temp-token-ttl").Seconds()),
+		instTokTTL:             uint(ctx.Duration("token-ttl").Seconds()),
+	}
 }
 
 /* TODO: #5
