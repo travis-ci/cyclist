@@ -93,6 +93,18 @@ func NewCLI() *cli.App {
 				},
 				Action: runServe,
 			},
+			{
+				Name: "set-down",
+				Flags: []cli.Flag{
+					&cli.StringSliceFlag{
+						Name:    "instances",
+						Aliases: []string{"i"},
+						Usage:   "the `INSTANCES` for which the instance state will be set to \"down\"",
+						EnvVars: []string{"CYCLIST_INSTANCES", "INSTANCES"},
+					},
+				},
+				Action: runSetDown,
+			},
 			/* TODO: #5
 			{
 				Name: "sqs",
@@ -124,6 +136,32 @@ func runServe(ctx *cli.Context) error {
 		return err
 	}
 	return srv.Serve()
+}
+
+func runSetDown(ctx *cli.Context) error {
+	log := buildLog(ctx.Bool("debug"))
+	db := &redisRepo{
+		cg:  buildRedisPool(ctx.String("redis-url")),
+		log: log,
+
+		instEventTTL:           uint(ctx.Duration("event-ttl").Seconds()),
+		instLifecycleActionTTL: uint(ctx.Duration("lifecycle-action-ttl").Seconds()),
+		instTempTokTTL:         uint(ctx.Duration("temp-token-ttl").Seconds()),
+		instTokTTL:             uint(ctx.Duration("token-ttl").Seconds()),
+	}
+
+	for _, instanceID := range ctx.StringSlice("instances") {
+		err := db.setInstanceState(instanceID, "down")
+		if err != nil {
+			return err
+		}
+		log.WithFields(logrus.Fields{
+			"instance_id": instanceID,
+			"state":       "down",
+		}).Info("set")
+	}
+
+	return nil
 }
 
 func runServeSetup(ctx *cli.Context) (*server, error) {
