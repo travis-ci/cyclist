@@ -53,7 +53,10 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 		return nil
 	}
 
-	log.WithField("action", action).Info("completing lifecycle action")
+	log.WithFields(logrus.Fields{
+		"asg":       action.AutoScalingGroupName,
+		"hook_name": action.LifecycleHookName,
+	}).Info("completing lifecycle action")
 
 	input := &autoscaling.CompleteLifecycleActionInput{
 		AutoScalingGroupName:  aws.String(action.AutoScalingGroupName),
