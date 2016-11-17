@@ -109,6 +109,15 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/aws/aws-sdk-go/service/sts",
+			"repository": "https://github.com/aws/aws-sdk-go",
+			"vcs": "git",
+			"revision": "12ce9fecda7689cae03a715e16c57519a97bddcd",
+			"branch": "master",
+			"path": "/service/sts",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/aws/aws-sdk-go/vendor/github.com/go-ini/ini",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
