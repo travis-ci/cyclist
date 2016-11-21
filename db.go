@@ -274,6 +274,10 @@ func (rr *redisRepo) fetchInstanceLifecycleAction(transition, instanceID string)
 		return nil, err
 	}
 
+	if len(attrs) == 0 {
+		return nil, nil
+	}
+
 	ala := &lifecycleAction{}
 	err = redis.ScanStruct(attrs, ala)
 	if err != nil {
