@@ -28,6 +28,7 @@ type repo interface {
 	wipeInstanceState(instanceID string) error
 
 	storeInstanceEvent(instanceID, event string) error
+	fetchInstanceEvent(instanceID, event string) (*lifecycleEvent, error)
 	fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, error)
 	fetchAllInstanceEvents() (map[string][]*lifecycleEvent, error)
 
@@ -97,6 +98,22 @@ func (rr *redisRepo) storeInstanceEvent(instanceID, event string) error {
 
 	return rr.hsetex(fmt.Sprintf("%s:instance:%s:events", RedisNamespace, instanceID),
 		event, time.Now().UTC().Format(time.RFC3339Nano), rr.instEventTTL)
+}
+
+func (rr *redisRepo) fetchInstanceEvent(instanceID, event string) (*lifecycleEvent, error) {
+	conn := rr.cg.Get()
+	defer rr.closeConn(conn)
+
+	ts, err := redis.String(conn.Do("HGET", fmt.Sprintf("%s:instance:%s:events", RedisNamespace, instanceID), event))
+	if err != nil {
+		return nil, err
+	}
+
+	if ts == "" {
+		return nil, fmt.Errorf("no %s event for instance %s", event, instanceID)
+	}
+
+	return newLifecycleEvent(event, ts), nil
 }
 
 func (rr *redisRepo) fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, error) {

@@ -70,7 +70,7 @@ func (srv *server) Serve() error {
 func (srv *server) setupRouter() {
 	srv.router = mux.NewRouter()
 	srv.router.HandleFunc(`/sns`,
-		newSNSHandlerFunc(srv.db, srv.log, srv.snsSvc, srv.snsVerify, srv.tokGen)).Methods("POST")
+		newSNSHandlerFunc(srv.db, srv.log, srv.snsSvc, srv.snsVerify, srv.tokGen, srv.asSvc)).Methods("POST")
 
 	srv.router.Handle(`/tokens/{instance_id}`,
 		srv.authd(newTokensHandlerFunc(srv.db, srv.log))).Methods("GET")
@@ -83,6 +83,9 @@ func (srv *server) setupRouter() {
 
 	srv.router.Handle(`/terminations/{instance_id}`,
 		srv.instAuthd(newLifecycleHandlerFunc("termination", srv.db, srv.log, srv.asSvc))).Methods("POST")
+
+	srv.router.Handle(`/implosions/{instance_id}`,
+		srv.instAuthd(newImplosionsHandlerFunc(srv.db, srv.log))).Methods("POST")
 
 	srv.router.Handle(`/events/{instance_id}`,
 		srv.instAuthd(newLifecycleEventsHandlerFunc(srv.db, srv.log))).Methods("GET")

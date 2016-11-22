@@ -19,7 +19,7 @@ func newTestServer() *server {
 
 		db:     newTestRepo(),
 		log:    shushLog,
-		asSvc:  newTestAutosScalingService(nil),
+		asSvc:  newTestAutoScalingService(nil),
 		snsSvc: newTestSNSService(nil),
 		tokGen: newTestTokenGenerator(),
 

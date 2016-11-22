@@ -31,7 +31,7 @@ func TestHandleSNSConfirmation(t *testing.T) {
 }
 
 func TestHandleSNSNotification_EmptyMessage(t *testing.T) {
-	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), &snsMessage{})
+	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), &snsMessage{}, newTestAutoScalingService(nil))
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Regexp(t, "invalid json.+", err.Error())
 }
@@ -40,7 +40,7 @@ func TestHandleSNSNotification_TestNotification(t *testing.T) {
 	msg := &snsMessage{
 		Message: `{"Event": "autoscaling:TEST_NOTIFICATION"}`,
 	}
-	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg)
+	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg, newTestAutoScalingService(nil))
 	assert.Equal(t, http.StatusAccepted, status)
 	assert.Nil(t, err)
 }
@@ -49,7 +49,7 @@ func TestHandleSNSNotification_InstanceLaunching_InvalidPayload(t *testing.T) {
 	msg := &snsMessage{
 		Message: `{"LifecycleTransition": "autoscaling:EC2_INSTANCE_LAUNCHING"}`,
 	}
-	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg)
+	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg, newTestAutoScalingService(nil))
 	assert.NotNil(t, err)
 	assert.Equal(t, http.StatusBadRequest, status)
 	assert.Regexp(t, "missing required fields in lifecycle action.+", err.Error())
@@ -65,7 +65,7 @@ func TestHandleSNSNotification_InstanceLaunching(t *testing.T) {
 			"LifecycleHookName": "huzzah-9001"
 		}`, ""), ""),
 	}
-	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg)
+	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg, newTestAutoScalingService(nil))
 	assert.Equal(t, http.StatusOK, status)
 	assert.Nil(t, err)
 }
@@ -80,7 +80,7 @@ func TestHandleSNSNotification_InstanceTerminating(t *testing.T) {
 			"LifecycleHookName": "huzzah-9001"
 		}`, ""), ""),
 	}
-	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg)
+	status, err := handleSNSNotification(newTestRepo(), shushLog, newTestTokenGenerator(), msg, newTestAutoScalingService(nil))
 	assert.Equal(t, http.StatusOK, status)
 	assert.Nil(t, err)
 }
