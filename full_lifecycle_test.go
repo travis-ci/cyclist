@@ -115,7 +115,7 @@ func (f *fullLifecycleManagementHTTP) stepInitServer(ctx *cli.Context) {
 	assert.NotNil(f.t, srv.db)
 
 	srv.snsVerify = false
-	srv.asSvc = newTestAutosScalingService(f.autoScalingCallback)
+	srv.asSvc = newTestAutoScalingService(f.autoScalingCallback)
 	srv.snsSvc = newTestSNSService(f.snsCallback)
 	if os.Getenv("DEBUG") != "1" {
 		srv.log.(*logrus.Logger).Level = logrus.FatalLevel

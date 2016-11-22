@@ -97,6 +97,20 @@ func (tr *testRepo) storeInstanceEvent(instanceID, event string) error {
 	return nil
 }
 
+func (tr *testRepo) fetchInstanceEvent(instanceID, event string) (*lifecycleEvent, error) {
+	eventsMap, ok := tr.e[instanceID]
+	if !ok {
+		return nil, fmt.Errorf("no events for instance '%s'", instanceID)
+	}
+
+	le, ok := eventsMap[event]
+	if !ok {
+		return nil, fmt.Errorf("no '%s' event for instance '%s'", event, instanceID)
+	}
+
+	return le, nil
+}
+
 func (tr *testRepo) fetchInstanceEvents(instanceID string) ([]*lifecycleEvent, error) {
 	eventsMap, ok := tr.e[instanceID]
 	if !ok {
@@ -190,7 +204,7 @@ func newTestSNSService(f func(*request.Request)) snsiface.SNSAPI {
 	return svc
 }
 
-func newTestAutosScalingService(f func(*request.Request)) autoscalingiface.AutoScalingAPI {
+func newTestAutoScalingService(f func(*request.Request)) autoscalingiface.AutoScalingAPI {
 	svc := autoscaling.New(session.New(), aws.NewConfig().WithRegion("nz-isengard-1"))
 	svc.Handlers.Clear()
 	if f == nil {

@@ -34,7 +34,6 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 	asSvc autoscalingiface.AutoScalingAPI, transition, instanceID string) error {
 
 	log = log.WithFields(logrus.Fields{
-		"instance":   instanceID,
 		"transition": transition,
 	})
 
@@ -53,19 +52,7 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 		return nil
 	}
 
-	log.WithFields(logrus.Fields{
-		"asg":       action.AutoScalingGroupName,
-		"hook_name": action.LifecycleHookName,
-	}).Info("completing lifecycle action")
-
-	input := &autoscaling.CompleteLifecycleActionInput{
-		AutoScalingGroupName:  aws.String(action.AutoScalingGroupName),
-		InstanceId:            aws.String(instanceID),
-		LifecycleActionResult: aws.String("CONTINUE"),
-		LifecycleActionToken:  aws.String(action.LifecycleActionToken),
-		LifecycleHookName:     aws.String(action.LifecycleHookName),
-	}
-	_, err = asSvc.CompleteLifecycleAction(input)
+	err = completeLifecycleAction(action, log, asSvc)
 	if err != nil {
 		return err
 	}
@@ -87,6 +74,23 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 	}
 }
 
+func completeLifecycleAction(la *lifecycleAction, log logrus.FieldLogger, asSvc autoscalingiface.AutoScalingAPI) error {
+	log.WithFields(logrus.Fields{
+		"asg":       la.AutoScalingGroupName,
+		"hook_name": la.LifecycleHookName,
+	}).Info("completing lifecycle action")
+
+	input := &autoscaling.CompleteLifecycleActionInput{
+		AutoScalingGroupName:  aws.String(la.AutoScalingGroupName),
+		InstanceId:            aws.String(la.EC2InstanceID),
+		LifecycleActionResult: aws.String("CONTINUE"),
+		LifecycleActionToken:  aws.String(la.LifecycleActionToken),
+		LifecycleHookName:     aws.String(la.LifecycleHookName),
+	}
+	_, err := asSvc.CompleteLifecycleAction(input)
+	return err
+}
+
 func newLifecycleHandlerFunc(transition string, db repo,
 	log logrus.FieldLogger,
 	asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
@@ -97,12 +101,14 @@ func newLifecycleHandlerFunc(transition string, db repo,
 	})[transition]
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		instanceID := mux.Vars(r)["instance_id"]
 		log = log.WithFields(logrus.Fields{
-			"path":   r.URL.Path,
-			"method": r.Method,
+			"path":     r.URL.Path,
+			"method":   r.Method,
+			"instance": instanceID,
 		})
 		err := handleLifecycleTransition(
-			db, log, asSvc, gerund, mux.Vars(r)["instance_id"])
+			db, log, asSvc, gerund, instanceID)
 		if err != nil {
 			log.WithField("err", err).Error("handling lifecycle transition failed")
 			jsonRespond(w, http.StatusBadRequest, &jsonErr{
@@ -113,6 +119,33 @@ func newLifecycleHandlerFunc(transition string, db repo,
 
 		jsonRespond(w, http.StatusOK, &jsonMsg{
 			Message: fmt.Sprintf("instance %s complete", transition),
+		})
+	}
+}
+
+func newImplosionsHandlerFunc(db repo, log logrus.FieldLogger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		instanceID := mux.Vars(r)["instance_id"]
+		log = log.WithField("instance", instanceID)
+		err := db.setInstanceState(instanceID, "down")
+		if err != nil {
+			log.WithField("err", err).Error("setting instance state down failed")
+			jsonRespond(w, http.StatusInternalServerError, &jsonErr{
+				Err: errors.Wrap(err, "setting instance state down failed"),
+			})
+			return
+		}
+		err = db.storeInstanceEvent(instanceID, "implosion")
+		if err != nil {
+			log.WithField("err", err).Error("storing implosion event failed")
+			jsonRespond(w, http.StatusInternalServerError, &jsonErr{
+				Err: errors.Wrap(err, "storing implosion event failed"),
+			})
+			return
+		}
+
+		jsonRespond(w, http.StatusOK, &jsonMsg{
+			Message: fmt.Sprintf("instance implosion recorded"),
 		})
 	}
 }
