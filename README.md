@@ -23,6 +23,11 @@ notify the instance that is to be retired to shut down gracefully (all workers
 poll for this condition). The instance finishes the jobs and notifies cyclist
 that it is ready to shut down. Cyclist then terminates the instance.
 
+## Pre-Install
+
+Ensure that you have cloned the repository into your $GOPATH, e.g.
+`~/go/src/github.com/travis-ci/cyclist`.
+
 ## Install
 
 ``` bash
