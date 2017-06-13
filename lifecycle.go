@@ -54,9 +54,7 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 	}
 
 	if transition == "terminating" && os.Getenv("DETACH_INSTANCE_ON_TERMINATION") == "true" {
-		log = log.WithFields(logrus.Fields{
-			"detach": true,
-		})
+		log = log.WithField("detach", true)
 
 		err = detachInstanceFromASG(action, log, asSvc)
 	} else {
