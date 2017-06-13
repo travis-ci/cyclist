@@ -83,7 +83,7 @@ func (srv *server) setupRouter() {
 		srv.instAuthd(newLifecycleHandlerFunc("launch", srv.db, srv.log, srv.asSvc, srv.detach))).Methods("POST")
 
 	srv.router.Handle(`/terminations/{instance_id}`,
-		srv.instAuthd(newLifecycleHandlerFunc("termination", srv.db, srv.log, srv.asSvc))).Methods("POST")
+		srv.instAuthd(newLifecycleHandlerFunc("termination", srv.db, srv.log, srv.asSvc, srv.detach))).Methods("POST")
 
 	srv.router.Handle(`/implosions/{instance_id}`,
 		srv.instAuthd(newImplosionsHandlerFunc(srv.db, srv.log))).Methods("POST")
