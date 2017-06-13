@@ -86,9 +86,9 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 
 func detachInstanceFromASG(la *lifecycleAction, log logrus.FieldLogger, asSvc autoscalingiface.AutoScalingAPI) error {
 	log.WithFields(logrus.Fields{
-		"asg":         la.AutoScalingGroupName,
-		"hook_name":   la.LifecycleHookName,
-		"instance_id": la.EC2InstanceID,
+		"asg":       la.AutoScalingGroupName,
+		"hook_name": la.LifecycleHookName,
+		"instance":  la.EC2InstanceID,
 	}).Info("detaching instance from asg")
 
 	input := &autoscaling.DetachInstancesInput{
