@@ -3,6 +3,7 @@ package cyclist
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
@@ -52,7 +53,16 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 		return nil
 	}
 
-	err = completeLifecycleAction(action, log, asSvc)
+	if transition == "terminating" && os.Getenv("DETACH_INSTANCE_ON_TERMINATION") == "true" {
+		log = log.WithFields(logrus.Fields{
+			"detach": true,
+		})
+
+		err = detachInstanceFromASG(action, log, asSvc)
+	} else {
+		err = completeLifecycleAction(action, log, asSvc)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -72,6 +82,23 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 	default:
 		return fmt.Errorf("unknown lifecycle transition '%s'", transition)
 	}
+}
+
+func detachInstanceFromASG(la *lifecycleAction, log logrus.FieldLogger, asSvc autoscalingiface.AutoScalingAPI) error {
+	log.WithFields(logrus.Fields{
+		"asg":         la.AutoScalingGroupName,
+		"hook_name":   la.LifecycleHookName,
+		"instance_id": la.EC2InstanceID,
+	}).Info("detaching instance from asg")
+
+	input := &autoscaling.DetachInstancesInput{
+		AutoScalingGroupName:           aws.String(la.AutoScalingGroupName),
+		InstanceIds:                    aws.StringSlice([]string{la.EC2InstanceID}),
+		ShouldDecrementDesiredCapacity: aws.Bool(false),
+	}
+
+	_, err := asSvc.DetachInstances(input)
+	return err
 }
 
 func completeLifecycleAction(la *lifecycleAction, log logrus.FieldLogger, asSvc autoscalingiface.AutoScalingAPI) error {
