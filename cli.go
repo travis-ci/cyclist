@@ -66,6 +66,12 @@ func NewCLI() *cli.App {
 				EnvVars: []string{"CYCLIST_LIFECYCLE_ACTION_TTL", "LIFECYCLE_ACTION_TTL"},
 			},
 			&cli.BoolFlag{
+				Name:    "detach",
+				Value:   false,
+				Usage:   "detach instances on termination",
+				EnvVars: []string{"CYCLIST_DETACH", "DETACH"},
+			},
+			&cli.BoolFlag{
 				Name:    "debug",
 				Value:   false,
 				Usage:   "set log level to debug",
@@ -188,6 +194,7 @@ func runServeSetup(ctx *cli.Context) (*server, error) {
 		tokGen: &uuidTokenGenerator{},
 
 		snsVerify: true,
+		detach:    ctx.Bool("detach"),
 	}, nil
 }
 

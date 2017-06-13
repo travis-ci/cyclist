@@ -3,7 +3,6 @@ package cyclist
 import (
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
@@ -32,10 +31,12 @@ func handleTerminatingLifecycleTransition(db repo, instanceID string) error {
 }
 
 func handleLifecycleTransition(db repo, log logrus.FieldLogger,
-	asSvc autoscalingiface.AutoScalingAPI, transition, instanceID string) error {
+	asSvc autoscalingiface.AutoScalingAPI, detach bool, transition,
+	instanceID string) error {
 
 	log = log.WithFields(logrus.Fields{
 		"transition": transition,
+		"detach":     detach,
 	})
 
 	action, err := db.fetchInstanceLifecycleAction(transition, instanceID)
@@ -53,9 +54,7 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 		return nil
 	}
 
-	if transition == "terminating" && os.Getenv("DETACH_INSTANCE_ON_TERMINATION") == "true" {
-		log = log.WithField("detach", true)
-
+	if transition == "terminating" && detach {
 		err = detachInstanceFromASG(action, log, asSvc)
 	} else {
 		err = completeLifecycleAction(action, log, asSvc)
@@ -118,7 +117,8 @@ func completeLifecycleAction(la *lifecycleAction, log logrus.FieldLogger, asSvc 
 
 func newLifecycleHandlerFunc(transition string, db repo,
 	log logrus.FieldLogger,
-	asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
+	asSvc autoscalingiface.AutoScalingAPI,
+	detach bool) http.HandlerFunc {
 
 	gerund := (map[string]string{
 		"launch":      "launching",
@@ -133,7 +133,7 @@ func newLifecycleHandlerFunc(transition string, db repo,
 			"instance": instanceID,
 		})
 		err := handleLifecycleTransition(
-			db, log, asSvc, gerund, instanceID)
+			db, log, asSvc, detach, gerund, instanceID)
 		if err != nil {
 			log.WithField("err", err).Error("handling lifecycle transition failed")
 			jsonRespond(w, http.StatusBadRequest, &jsonErr{

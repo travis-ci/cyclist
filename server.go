@@ -34,6 +34,7 @@ type server struct {
 	router *mux.Router
 
 	snsVerify bool
+	detach    bool
 }
 
 func (srv *server) ohai(w http.ResponseWriter, req *http.Request) {
@@ -79,7 +80,7 @@ func (srv *server) setupRouter() {
 		srv.instAuthd(newHeartbeatHandlerFunc(srv.db, srv.log))).Methods("GET")
 
 	srv.router.Handle(`/launches/{instance_id}`,
-		srv.instAuthd(newLifecycleHandlerFunc("launch", srv.db, srv.log, srv.asSvc))).Methods("POST")
+		srv.instAuthd(newLifecycleHandlerFunc("launch", srv.db, srv.log, srv.asSvc, srv.detach))).Methods("POST")
 
 	srv.router.Handle(`/terminations/{instance_id}`,
 		srv.instAuthd(newLifecycleHandlerFunc("termination", srv.db, srv.log, srv.asSvc))).Methods("POST")
