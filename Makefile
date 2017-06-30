@@ -14,7 +14,7 @@ COPYRIGHT_VALUE ?= $(shell grep -i ^copyright LICENSE | sed 's/^[Cc]opyright //'
 
 OS := $(shell uname | tr '[:upper:]' '[:lower:]')
 ARCH := $(shell uname -m | if grep -q x86_64 ; then echo amd64 ; else uname -m ; fi)
-GOPATH := $(shell echo "$${GOPATH%%:*}")
+GOPATH := $(shell go env GOPATH | sed 's/:.*//')
 GOBUILD_LDFLAGS ?= \
 	-X '$(VERSION_VAR)=$(VERSION_VALUE)' \
 	-X '$(REV_VAR)=$(REV_VALUE)' \
