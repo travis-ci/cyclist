@@ -5,3 +5,8 @@ services:
     ports:
       - "9753:9753"
     command: script/docker-entrypoint.sh
+    environment:
+      CYCLIST_REDIS_URL: "redis://redis:6379"
+      CYCLIST_AUTH_TOKENS: "foo,bar,foobar"
+  redis:
+    image: redis

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+curl \
+    -H 'Authorization: token foobar' \
+    localhost:9753/heartbeats/i-foo
