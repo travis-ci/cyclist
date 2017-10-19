@@ -1,0 +1,7 @@
+version: "3"
+services:
+  cyclist:
+    build: .
+    ports:
+      - "9753:9753"
+    command: script/docker-entrypoint.sh

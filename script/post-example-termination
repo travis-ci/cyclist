@@ -1,0 +1,5 @@
+#!/bin/bash
+
+curl -f -X POST \
+    -H 'Authorization: token foobar' \
+    localhost:9753/terminations/i-foo
