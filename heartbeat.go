@@ -3,8 +3,8 @@ package cyclist
 import (
 	"net/http"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 )
 
 func newHeartbeatHandlerFunc(db repo, log logrus.FieldLogger) http.HandlerFunc {
