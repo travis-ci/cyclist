@@ -20,6 +20,15 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/aws/aws-sdk-go/internal/shareddefaults",
+			"repository": "https://github.com/aws/aws-sdk-go",
+			"vcs": "git",
+			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"branch": "master",
+			"path": "/internal/shareddefaults",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/aws/aws-sdk-go/private/protocol",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
