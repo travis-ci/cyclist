@@ -1,30 +1,12 @@
 FROM golang:1.9 as builder
 MAINTAINER Travis CI GmbH <support+cyclist-docker-image@travis-ci.org>
 
-RUN go get -u github.com/alecthomas/gometalinter
-RUN go get -u github.com/aws/aws-sdk-go/aws
-RUN go get -u github.com/aws/aws-sdk-go/aws/session
-RUN go get -u github.com/aws/aws-sdk-go/service/autoscaling
-RUN go get -u github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface
-RUN go get -u github.com/aws/aws-sdk-go/service/sns
-RUN go get -u github.com/aws/aws-sdk-go/service/sns/snsiface
-RUN go get -u github.com/garyburd/redigo/redis
-RUN go get -u github.com/gorilla/mux
-RUN go get -u github.com/meatballhat/negroni-logrus
-RUN go get -u github.com/pborman/uuid
-RUN go get -u github.com/pkg/errors
-RUN go get -u github.com/sirupsen/logrus
-RUN go get -u github.com/urfave/negroni
 RUN go get -u github.com/FiloSottile/gvt
-RUN go get -u gopkg.in/urfave/cli.v2
-
-
 COPY . /go/src/github.com/travis-ci/cyclist
 WORKDIR /go/src/github.com/travis-ci/cyclist
-RUN make deps
 ENV CGO_ENABLED 0
-RUN rm -rf vendor/github.com/meatballhat/
-RUN make build
+#RUN make deps
+RUN make
 
 #################################
 ### linux/amd64/cyclist ###

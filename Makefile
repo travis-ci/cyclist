@@ -46,7 +46,7 @@ listdeps:
 
 .PHONY: lint
 lint: deps
-	$(GOPATH)/bin/gometalinter --disable-all \
+	$(GOPATH)/bin/gometalinter --disable-all --errors \
 		-E deadcode \
 		-E goconst \
 		-E gofmt \

@@ -349,7 +349,7 @@
 			"importpath": "golang.org/x/net/context",
 			"repository": "https://go.googlesource.com/net",
 			"vcs": "git",
-			"revision": "1087133bc4af3073e18add999345c6ae75918503",
+			"revision": "aabf50738bcdd9b207582cbe796b59ed65d56680",
 			"branch": "master",
 			"path": "/context",
 			"notests": true
