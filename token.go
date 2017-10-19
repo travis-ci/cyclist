@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"github.com/pborman/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 var (

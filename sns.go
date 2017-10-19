@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sns/snsiface"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 func newSNSHandlerFunc(db repo, log logrus.FieldLogger, snsSvc snsiface.SNSAPI, snsVerify bool, tokGen tokenGenerator, asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
