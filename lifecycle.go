@@ -31,10 +31,12 @@ func handleTerminatingLifecycleTransition(db repo, instanceID string) error {
 }
 
 func handleLifecycleTransition(db repo, log logrus.FieldLogger,
-	asSvc autoscalingiface.AutoScalingAPI, transition, instanceID string) error {
+	asSvc autoscalingiface.AutoScalingAPI, detach bool, transition,
+	instanceID string) error {
 
 	log = log.WithFields(logrus.Fields{
 		"transition": transition,
+		"detach":     detach,
 	})
 
 	action, err := db.fetchInstanceLifecycleAction(transition, instanceID)
@@ -52,7 +54,12 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 		return nil
 	}
 
-	err = completeLifecycleAction(action, log, asSvc)
+	if transition == "terminating" && detach {
+		err = detachInstanceFromASG(action, log, asSvc)
+	} else {
+		err = completeLifecycleAction(action, log, asSvc)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -74,6 +81,23 @@ func handleLifecycleTransition(db repo, log logrus.FieldLogger,
 	}
 }
 
+func detachInstanceFromASG(la *lifecycleAction, log logrus.FieldLogger, asSvc autoscalingiface.AutoScalingAPI) error {
+	log.WithFields(logrus.Fields{
+		"asg":       la.AutoScalingGroupName,
+		"hook_name": la.LifecycleHookName,
+		"instance":  la.EC2InstanceID,
+	}).Info("detaching instance from asg")
+
+	input := &autoscaling.DetachInstancesInput{
+		AutoScalingGroupName:           aws.String(la.AutoScalingGroupName),
+		InstanceIds:                    aws.StringSlice([]string{la.EC2InstanceID}),
+		ShouldDecrementDesiredCapacity: aws.Bool(false),
+	}
+
+	_, err := asSvc.DetachInstances(input)
+	return err
+}
+
 func completeLifecycleAction(la *lifecycleAction, log logrus.FieldLogger, asSvc autoscalingiface.AutoScalingAPI) error {
 	log.WithFields(logrus.Fields{
 		"asg":       la.AutoScalingGroupName,
@@ -93,7 +117,8 @@ func completeLifecycleAction(la *lifecycleAction, log logrus.FieldLogger, asSvc 
 
 func newLifecycleHandlerFunc(transition string, db repo,
 	log logrus.FieldLogger,
-	asSvc autoscalingiface.AutoScalingAPI) http.HandlerFunc {
+	asSvc autoscalingiface.AutoScalingAPI,
+	detach bool) http.HandlerFunc {
 
 	gerund := (map[string]string{
 		"launch":      "launching",
@@ -108,7 +133,7 @@ func newLifecycleHandlerFunc(transition string, db repo,
 			"instance": instanceID,
 		})
 		err := handleLifecycleTransition(
-			db, log, asSvc, gerund, instanceID)
+			db, log, asSvc, detach, gerund, instanceID)
 		if err != nil {
 			log.WithField("err", err).Error("handling lifecycle transition failed")
 			jsonRespond(w, http.StatusBadRequest, &jsonErr{
