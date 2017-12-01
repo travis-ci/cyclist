@@ -5,7 +5,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/aws",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "aws",
 			"notests": true
@@ -14,7 +14,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/awstesting",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "awstesting",
 			"notests": true
@@ -23,7 +23,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/internal/shareddefaults",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "/internal/shareddefaults",
 			"notests": true
@@ -32,7 +32,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/private/protocol",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "private/protocol",
 			"notests": true
@@ -41,7 +41,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/private/signer/v2",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "private/signer/v2",
 			"notests": true
@@ -50,7 +50,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/private/util",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "private/util",
 			"notests": true
@@ -59,7 +59,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/service/autoscaling",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "service/autoscaling",
 			"notests": true
@@ -68,7 +68,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/service/ec2",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "service/ec2",
 			"notests": true
@@ -77,7 +77,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/service/sns",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "/service/sns",
 			"notests": true
@@ -86,7 +86,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/service/sqs",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "service/sqs",
 			"notests": true
@@ -95,7 +95,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/service/sts",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "/service/sts",
 			"notests": true
@@ -104,7 +104,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/vendor/github.com/go-ini/ini",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "vendor/github.com/go-ini/ini",
 			"notests": true
@@ -113,7 +113,7 @@
 			"importpath": "github.com/aws/aws-sdk-go/vendor/github.com/jmespath/go-jmespath",
 			"repository": "https://github.com/aws/aws-sdk-go",
 			"vcs": "git",
-			"revision": "4fd2087ed0bb8d6c3c388900f77d890d1fb49683",
+			"revision": "52bbb79f3236949cc20bdac413da6f5102c3fe0c",
 			"branch": "master",
 			"path": "vendor/github.com/jmespath/go-jmespath",
 			"notests": true
@@ -122,7 +122,7 @@
 			"importpath": "github.com/certifi/gocertifi",
 			"repository": "https://github.com/certifi/gocertifi",
 			"vcs": "git",
-			"revision": "3fd9e1adb12b72d2f3f82191d49be9b93c69f67c",
+			"revision": "a4ab0227d360091084658029ec8ae45f989fba3e",
 			"branch": "master",
 			"notests": true
 		},
@@ -130,7 +130,7 @@
 			"importpath": "github.com/garyburd/redigo/internal",
 			"repository": "https://github.com/garyburd/redigo",
 			"vcs": "git",
-			"revision": "34a326de1fea52965fa5ad664d3fc7163dd4b0a1",
+			"revision": "b389d5392e340092642eec4e36754e0280ad1f8e",
 			"branch": "master",
 			"path": "internal",
 			"notests": true
@@ -139,7 +139,7 @@
 			"importpath": "github.com/garyburd/redigo/redis",
 			"repository": "https://github.com/garyburd/redigo",
 			"vcs": "git",
-			"revision": "34a326de1fea52965fa5ad664d3fc7163dd4b0a1",
+			"revision": "b389d5392e340092642eec4e36754e0280ad1f8e",
 			"branch": "master",
 			"path": "/redis",
 			"notests": true
@@ -148,7 +148,7 @@
 			"importpath": "github.com/getsentry/raven-go",
 			"repository": "https://github.com/getsentry/raven-go",
 			"vcs": "git",
-			"revision": "1452f6376ddb15c546b6d7567e1d9518765391b5",
+			"revision": "c9de0b92586aaba092c2a231cb7384354b178544",
 			"branch": "master",
 			"notests": true
 		},
@@ -156,7 +156,7 @@
 			"importpath": "github.com/golang/protobuf/proto",
 			"repository": "https://github.com/golang/protobuf",
 			"vcs": "git",
-			"revision": "130e6b02ab059e7b717a096f397c5b60111cae74",
+			"revision": "1e59b77b52bf8e4b449a57e6f79f21226d571845",
 			"branch": "master",
 			"path": "/proto",
 			"notests": true
@@ -165,7 +165,7 @@
 			"importpath": "github.com/golang/protobuf/ptypes/any",
 			"repository": "https://github.com/golang/protobuf",
 			"vcs": "git",
-			"revision": "130e6b02ab059e7b717a096f397c5b60111cae74",
+			"revision": "1e59b77b52bf8e4b449a57e6f79f21226d571845",
 			"branch": "master",
 			"path": "ptypes/any",
 			"notests": true
@@ -174,7 +174,7 @@
 			"importpath": "github.com/gopherjs/gopherjs/js",
 			"repository": "https://github.com/gopherjs/gopherjs",
 			"vcs": "git",
-			"revision": "a0a7cfed7b2a54080888fd2b3d4a3ec14562c86c",
+			"revision": "444abdf920945de5d4a977b572bcc6c674d1e4eb",
 			"branch": "master",
 			"path": "/js",
 			"notests": true
@@ -191,7 +191,7 @@
 			"importpath": "github.com/gorilla/mux",
 			"repository": "https://github.com/gorilla/mux",
 			"vcs": "git",
-			"revision": "9bd9ff2d1d2a0660d35050674f2c3112547997af",
+			"revision": "65ec7248c53f499f6b480655e019e0b9d7a6ce11",
 			"branch": "master",
 			"notests": true
 		},
@@ -223,7 +223,7 @@
 			"importpath": "github.com/onsi/ginkgo",
 			"repository": "https://github.com/onsi/ginkgo",
 			"vcs": "git",
-			"revision": "11459a886d9cd66b319dac7ef1e917ee221372c9",
+			"revision": "7a241e9c6c7fb89adf3965bd763b7369b88a51eb",
 			"branch": "master",
 			"notests": true
 		},
@@ -231,7 +231,7 @@
 			"importpath": "github.com/onsi/gomega",
 			"repository": "https://github.com/onsi/gomega",
 			"vcs": "git",
-			"revision": "283ed655c6b8238afecd5bea6434bc9b03129f2f",
+			"revision": "1eecca0ba8e6f5ea5a431ce21d3aee2af0b4c90b",
 			"branch": "master",
 			"notests": true
 		},
@@ -239,7 +239,7 @@
 			"importpath": "github.com/pborman/uuid",
 			"repository": "https://github.com/pborman/uuid",
 			"vcs": "git",
-			"revision": "e790cca94e6cc75c7064b1332e63811d4aae1a53",
+			"revision": "e533369306653d193b93dae055f6083cbf8ba54f",
 			"branch": "master",
 			"notests": true
 		},
@@ -255,7 +255,7 @@
 			"importpath": "github.com/rafaeljusto/redigomock",
 			"repository": "https://github.com/rafaeljusto/redigomock",
 			"vcs": "git",
-			"revision": "7ae0511314e9946bb0c87d6d485169ab2467a290",
+			"revision": "77fb2448ff2f9d298f1b91d341dd4a6a280aff7e",
 			"branch": "master",
 			"notests": true
 		},
@@ -271,7 +271,7 @@
 			"importpath": "github.com/sirupsen/logrus",
 			"repository": "https://github.com/sirupsen/logrus",
 			"vcs": "git",
-			"revision": "89742aefa4b206dcf400792f3bd35b542998eb3b",
+			"revision": "95cd2b9c79aa5e72ab0bc69b7ccc2be15bf850f6",
 			"branch": "master",
 			"notests": true
 		},
@@ -332,7 +332,7 @@
 			"importpath": "github.com/urfave/negroni",
 			"repository": "https://github.com/urfave/negroni",
 			"vcs": "git",
-			"revision": "079cf0c7a6b0145ebcf4103ec90380370cd89917",
+			"revision": "5dbbc83f748fc3ad38585842b0aedab546d0ea1e",
 			"branch": "master",
 			"notests": true
 		},
@@ -340,7 +340,7 @@
 			"importpath": "golang.org/x/crypto/ssh/terminal",
 			"repository": "https://go.googlesource.com/crypto",
 			"vcs": "git",
-			"revision": "959b3afb35f6a769732990dceca09da087ee47f5",
+			"revision": "94eea52f7b742c7cbe0b03b22f0c4c8631ece122",
 			"branch": "master",
 			"path": "/ssh/terminal",
 			"notests": true
@@ -349,7 +349,7 @@
 			"importpath": "golang.org/x/net/context",
 			"repository": "https://go.googlesource.com/net",
 			"vcs": "git",
-			"revision": "1087133bc4af3073e18add999345c6ae75918503",
+			"revision": "a8b9294777976932365dabb6640cf1468d95c70f",
 			"branch": "master",
 			"path": "/context",
 			"notests": true
@@ -358,7 +358,7 @@
 			"importpath": "golang.org/x/sys/unix",
 			"repository": "https://go.googlesource.com/sys",
 			"vcs": "git",
-			"revision": "8dbc5d05d6edcc104950cc299a1ce6641235bc86",
+			"revision": "13fcbd661c8ececa8807a29b48407d674b1d8ed8",
 			"branch": "master",
 			"path": "/unix",
 			"notests": true
@@ -367,7 +367,7 @@
 			"importpath": "golang.org/x/sys/windows",
 			"repository": "https://go.googlesource.com/sys",
 			"vcs": "git",
-			"revision": "8dbc5d05d6edcc104950cc299a1ce6641235bc86",
+			"revision": "13fcbd661c8ececa8807a29b48407d674b1d8ed8",
 			"branch": "master",
 			"path": "/windows",
 			"notests": true
@@ -408,7 +408,7 @@
 			"importpath": "gopkg.in/yaml.v2",
 			"repository": "https://gopkg.in/yaml.v2",
 			"vcs": "git",
-			"revision": "eb3733d160e74a9c7e442f435eb3bea458e1d19f",
+			"revision": "287cf08546ab5e7e37d55a84f7ed3fd1db036de5",
 			"branch": "v2",
 			"notests": true
 		}
