@@ -35,3 +35,6 @@ script:
 after_success:
 - bash <(curl -s https://codecov.io/bash)
 - tar -czvf build.tar.gz build Procfile Makefile
+
+notifications:
+  email: false
